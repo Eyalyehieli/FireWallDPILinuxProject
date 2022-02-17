@@ -1,0 +1,56 @@
+# depslib dependency file v1.0
+1627931711 source:/home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/list.c
+	<stdlib.h>
+	"list.h"
+	<stdio.h>
+
+1627931609 /home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/list.h
+
+1640873040 source:/home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/main.c
+	<stdio.h>
+	<stdlib.h>
+	<sqlite3.h>
+	<unistd.h>
+	<string.h>
+	<sys/types.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<netinet/udp.h>
+	<netinet/ip.h>
+	<netinet/in.h>
+	<libnetfilter_queue/libnetfilter_queue.h>
+	<libnetfilter_queue/libnetfilter_queue_ipv4.h>
+	<libnetfilter_queue/libnetfilter_queue_udp.h>
+	<linux/netfilter.h>
+	"myStruct.h"
+	"list.h"
+	"protocol.h"
+	"sqliteCon.h"
+
+1639057659 /home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/myStruct.h
+
+1640871134 /home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/protocol.h
+	<asm/types.h>
+
+1640871364 source:/home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/sqliteHandleDb.c
+	"sqliteHandleDb.h"
+
+1640872311 /home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/sqliteHandleDb.h
+	<stdio.h>
+	<stdlib.h>
+	<sqlite3.h>
+	"myStruct.h"
+	"list.h"
+	"protocol.h"
+
+1640872598 source:/home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/sqliteCon.c
+	"sqliteCon.h"
+
+1640872586 /home/eyalyehieli/Desktop/EyalCProgram/NFQUEUE/nfqFilterPkt/sqliteCon.h
+	<stdio.h>
+	<stdlib.h>
+	<sqlite3.h>
+	"myStruct.h"
+	"list.h"
+	"protocol.h"
+
