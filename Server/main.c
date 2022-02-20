@@ -47,7 +47,7 @@ int main()
 
     //puts(structToRecv->num);
     printf("structToRecv->num= %d\n",structToRecv->num);
-    printf("structToRecv->num2 =%lf\n",structToRecv->num2);
+    //printf("structToRecv->num2 =%lf\n",structToRecv->num2);
     close(sockfd);
 
     return 0;

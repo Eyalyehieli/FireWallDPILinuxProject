@@ -307,7 +307,7 @@ static int cb_orig(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_d
 	printf("iph->protocol= %u\n",iph->protocol);
 	printf(" IPPROTO_UDP= %u\n",IPPROTO_UDP);
 	return nfq_set_verdict2(qh, id, NF_ACCEPT, nfq_get_nfmark(nfa) | 0xFFFFFFFF,0, NULL);
-	if(iph->protocol == IPPROTO_UDP)
+	i print_pkt(nfa);f(iph->protocol == IPPROTO_UDP)
 	{
 	   puts("its udp pkt");
 	   udph=(struct udphdr*)(data_payload + (iph->ihl * 4));
@@ -347,7 +347,7 @@ static int cb_orig(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_d
 	return nfq_set_verdict2(qh, id, NF_ACCEPT, mark | 0xFFFFFFFF,0, NULL);
 }
 */
-static void prepared_line_file(char* line)
+/*static void prepared_line_file(char* line)
 {
     FILE* fptr;
     fptr = fopen("nfqFile1.json", "at");
@@ -358,10 +358,11 @@ static void prepared_line_file(char* line)
     // The file should be closed when everything is written
     fclose(fptr);
 }
+*/
 
 int main()
 {
-     char *serialized_json;
+     /*char *serialized_json;
 
     // Create an empty object : {}
     json_object * jobj = json_object_new_object();
@@ -376,7 +377,7 @@ int main()
     // Transforms the binary representation into a string representation
     serialized_json = json_object_to_json_string(jobj);
     prepared_line_file(serialized_json);
-
+*/
     startNfq();
 }
 

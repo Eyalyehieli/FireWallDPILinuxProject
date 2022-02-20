@@ -228,21 +228,20 @@ int check_pkt(__u16 dest_port,__u32 dest_ip,int payload_len,unsigned char *data_
      if(((dest_port)== getPort(active_protocol_to_check))&&(dest_ip==getIp(active_protocol_to_check)))
          {
            raw_payload=data_payload + (iph->ihl * 4)+ sizeof(struct udphdr); //(iph->ihl * 4)=sizeof(Network layer),sizeof(struct udphdr)=sizeof(transport header)
-           structCode=((int*)raw_payload)[0];//to read 4 bytes, cast to int*
-           structCode=2;//because I need to add in the struct the struct code i adeed it manualy
+           structCode=((int*)raw_payload)[0];//to read 4 bytes, cast to int*-to read the struct code
+           //structCode=1;//because I need to add in the struct the struct code i adeed it manualy
            readAllStructFields(structCode,active_protocol_to_check->protocolId,&list_of_structFields,&structSize);
 
 
-            if(structSize != payload_len-sizeof(structCode))
-            {
+            if(structSize != payload_len-sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr))//payload_len=packet_payload+sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr)
+            {                                                                                    //so to get to the raw payload i need to sub the headers from the payload data;
                 return 0;
             }
-            print_pkt(nfa);
             structField_to_check=list_first(list_of_structFields);
             while(structField_to_check)
             {
 
-             if(checkValidationInProtocol(raw_payload,structField_to_check,surfer)==0)
+             if(checkValidationInProtocol(raw_payload+sizeof(structCode),structField_to_check,surfer)==0)
               {
                 return 0;
               }
