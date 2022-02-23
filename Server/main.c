@@ -46,7 +46,8 @@ int main()
     //sendto(sockfd,(char*)buffer,sizeof(buffer),0,(struct sokaddr*)&cliaddr,sizeClieAddr);
 
     //puts(structToRecv->num);
-    printf("structToRecv->num= %d\n",structToRecv->num);
+    printf("structToRecv->code= %d\n",structToRecv->code);
+     printf("structToRecv->num= %d\n",structToRecv->num);
     //printf("structToRecv->num2 =%lf\n",structToRecv->num2);
     close(sockfd);
 

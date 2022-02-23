@@ -99,8 +99,7 @@ public class AddStructFieldGUI extends GUI{
 		   			changeFieldLabelTextField.setVisible(false);
 		   		    finishEditButton.setVisible(false);
 	 	   		  }
-	 		   }
-	 		   );
+	 		   });
 	       
 	       EditButton.addActionListener(new ActionListener()
 		   {
@@ -133,6 +132,11 @@ public class AddStructFieldGUI extends GUI{
 		    	   			String minRange=minRangeTextField.getText();
 		    	        	String maxRange=maxRangeTextField.getText();
 		    	        	//structFields.add(new StructsFieldsTable(fieldName,type,minRange,maxRange));
+		    	        	if(StructsFieldsTable.CheckRange(type, minRange, maxRange)==true)
+		    	        	{
+		    	        		JOptionPane.showMessageDialog(null, "Range i'snt proper");
+		    	        		return;
+		    	        	}
 		    	        	for(int i=0;i<structFieldsTabel.getRowCount();i++)
 		    	        	{
 		    	        		if(structFieldsTabel.getValueAt(i,0).toString().equals(fieldName))
@@ -154,8 +158,7 @@ public class AddStructFieldGUI extends GUI{
 		    	        		JOptionPane.showMessageDialog(null, "Wrong Values,try again");
 		    	        	}
 	    	   		  }
-	    		   }
-	    		   );
+	    		   });
 	       
 	       finished_button.addActionListener(new ActionListener()
 	    		   {

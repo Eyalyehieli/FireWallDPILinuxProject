@@ -22,7 +22,7 @@ public class SqliteDB
 	{
 		if(sqlitedb==null)
 		{
-			sqlitedb=new SqliteDB("jdbc:sqlite:"+System.getProperty("user.home")+"/Desktop/EyalJavaProgram/packetsNetFilterDB/netFilterDB.sqlite");
+			sqlitedb=new SqliteDB("jdbc:sqlite:"+System.getProperty("user.home")+"/Desktop/FireWallProject/FireWallDPILinuxProject/packetsNetFilterDB/netFilterDB.sqlite");
 		}
 		return sqlitedb;
 	}

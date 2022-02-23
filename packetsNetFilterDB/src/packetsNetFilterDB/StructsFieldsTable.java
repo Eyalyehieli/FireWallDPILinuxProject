@@ -79,6 +79,53 @@ public class StructsFieldsTable {
 		return 0;
 	}
 	
+	public static Boolean CheckRange(String rangeType,String minRange,String maxRange)
+	{
+		Object minRangeObj=null;
+		Object maxRangeObj=null;
+		if(rangeType==null||rangeType.isEmpty())
+		{
+			return false;
+		}
+		else if(rangeType.equals("INT"))
+		{
+			  minRangeObj=new Integer(Integer.valueOf(minRange));
+			  maxRangeObj=new Integer(Integer.valueOf(maxRange));
+			  return ((Integer)minRangeObj)>=((Integer)maxRangeObj);
+		}
+		else if(rangeType.equals("DOUBLE"))
+		{
+			minRangeObj= new Double(Double.valueOf(minRange));
+			maxRangeObj=new Double(Double.valueOf(maxRange));
+			return ((Double)minRangeObj)>=((Double)maxRangeObj);
+		}
+		else if(rangeType.equals("FLOAT"))
+		{
+			minRangeObj= new Float(Float.valueOf(minRange));
+			maxRangeObj=new Float(Float.valueOf(maxRange));
+			return ((Float)minRangeObj)>=((Float)maxRangeObj);
+		}
+		else if(rangeType.equals("CHAR"))
+		{
+			minRangeObj= new Character(Character.valueOf(minRange.charAt(0)));
+			maxRangeObj= new Character(Character.valueOf(maxRange.charAt(0)));
+			return ((Character)minRangeObj)>=((Character)maxRangeObj);
+		}
+		else if(rangeType.equals("SHORT"))
+		{
+			minRangeObj= new Short(Short.valueOf(minRange));
+			maxRangeObj= new Short(Short.valueOf(maxRange));
+			return ((Short)minRangeObj)>=((Short)maxRangeObj);
+		}
+		else if(rangeType.equals("LONG"))
+		{
+			minRangeObj=new Long(Long.valueOf(minRange));
+			maxRangeObj=new Long(Long.valueOf(maxRange));
+			return ((Long)minRangeObj)>=((Long)maxRangeObj);
+		}
+		return false;
+	}
+
 	
 
 }

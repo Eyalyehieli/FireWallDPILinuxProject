@@ -10,7 +10,7 @@ sqlite3* getDBInstance()
     static sqlite3 *db=NULL;
     if(db==NULL)
     {
-        sqlite3_open("/home/eyalyehieli/Desktop/EyalJavaProgram/packetsNetFilterDB/netFilterDB.sqlite",&db);
+        sqlite3_open("/home/eyalyehieli/Desktop/FireWallProject/FireWallDPILinuxProject/packetsNetFilterDB/netFilterDB.sqlite",&db);
     }
     return db;
 }
