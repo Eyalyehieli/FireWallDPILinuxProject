@@ -1,11 +1,10 @@
 #include "nfqHandle.h"
 
 #define CAPACITY 100
-
+FILE *logFile;
 void startNfq()
 {
   puts("server");
-
     struct nfq_handle *h;
 	struct nfq_q_handle *qh;
 	int fd;
@@ -200,7 +199,8 @@ int checkValidationInProtocol(unsigned char *raw_payload,structField *structFiel
         }
         *surfer+=sizeof(long);
      }
-
+    fputs("End of checkValidationInProtocol\n",logFile);
+    fflush(logFile);
     return decision;
 }
 
@@ -218,25 +218,39 @@ int check_pkt(__u16 dest_port,__u32 dest_ip,int payload_len,unsigned char *data_
    list* list_of_active_protocols=NULL;
    list* list_of_structFields=NULL;
    int structSize=0;
-
+    static countPacket=0;
    readActiveProtocolsFromDB(&list_of_active_protocols);//READ ALL THE SQLITE DB"
+   fputs("End of readActiveProtocolsFromDB\n",logFile);
+   fflush(logFile);
+   //fsync(logFile);
    active_protocol_to_check=list_first(list_of_active_protocols);
 
    i=0;
    while(active_protocol_to_check)
    {
+
      if(((dest_port)== getPort(active_protocol_to_check))&&(dest_ip==getIp(active_protocol_to_check)))
          {
+           fprintf(logFile,"dest port =%x and dest ip =%x\n",getPort(active_protocol_to_check),getIp(active_protocol_to_check));
+           fflush(logFile);
+           countPacket++;
+           fprintf(logFile,"count packet %d\n",countPacket);
+           fflush(logFile);
            print_pkt(nfa);
            raw_payload=data_payload + (iph->ihl * 4)+ sizeof(struct udphdr); //(iph->ihl * 4)=sizeof(Network layer),sizeof(struct udphdr)=sizeof(transport header)
            structCode=((int*)raw_payload)[0];//to read 4 bytes, cast to int*-to read the struct code
            //structCode=1;//because I need to add in the struct the struct code i adeed it manualy
            printf("struct code= %d\n",structCode);
            readAllStructFields(structCode,active_protocol_to_check->protocolId,&list_of_structFields,&structSize);
+           fputs("End of readAllStructFields\n",logFile);
+           fflush(logFile);
+           //fsync(logFile);
            //structSize-=1;
            //instead of using payload_len-sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr)
             printf("struct size by packet= %d\n",payload_len-sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr));
             printf("struct size by var= %d\n",structSize);
+            fprintf(logFile,"struct size %d\n",structSize);
+            fflush(logFile);
             if(structSize != payload_len-sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr))//payload_len=packet_payload+sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr)
             {                                                                                    //so to get to the raw payload i need to sub the headers from the payload data;
                 return 0;
@@ -256,6 +270,8 @@ int check_pkt(__u16 dest_port,__u32 dest_ip,int payload_len,unsigned char *data_
        //TODO:release the minRange and maxRange pointers???
        active_protocol_to_check=list_next(list_of_active_protocols);
     }
+    fputs("End of check_pkt\n",logFile);
+    fflush(logFile);
     return 1;
 }
 
@@ -274,6 +290,9 @@ int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, vo
     struct udphdr *udph;
     struct nfqnl_msg_packet_hdr *ph;
 
+   logFile=fopen("logFile.txt","w");
+   fputs("file created\n",logFile);
+   fflush(logFile);
    // print_pkt(nfa);
     ph = nfq_get_msg_packet_hdr(nfa);
 	if (ph)
@@ -293,9 +312,16 @@ int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, vo
        if(decision==0)
        {
           printf("DROP packet\n");
+          fputs("DROP packet\n",logFile);
+          fflush(logFile);
+          fclose(logFile);
           return nfq_set_verdict2(qh, id, NF_DROP, mark | 0xFFFFFFFF,0, NULL);
        }
     }
+
     printf("ACCEPT packet\n");
+    fputs("ACCEPT packet\n",logFile);
+    fflush(logFile);
+    fclose(logFile);
 	return nfq_set_verdict2(qh, id, NF_ACCEPT, mark | 0xFFFFFFFF,0, NULL);
 }

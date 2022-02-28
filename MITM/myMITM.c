@@ -12,7 +12,7 @@
 #include <linux/cdev.h>
 #include <linux/inet.h>
 #define PORT 8080
-#define SUB_SIZE 4
+#define SUB_SIZE 0
 //TODO:infect the packet
 MODULE_LICENSE("Dual BSD/GPL");
 static dev_t my_dev = 0;
@@ -20,6 +20,50 @@ static struct cdev *my_cdev = NULL;
 static struct nf_hook_ops nfho;
 static const int infectionMethod=1;        //struct holding set of hook function options
 //function to be called by hook
+
+unsigned short compute_udp_checksum(struct iphdr *pIph, unsigned short *ipPayload)
+ {
+    register unsigned long sum = 0;
+    struct udphdr *udphdrp = (struct udphdr*)(ipPayload);
+    unsigned short udpLen = htons(udphdrp->len);
+    //printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~udp len=%dn", udpLen);
+    //add the pseudo header
+    //printf("add pseudo headern");
+    //the source ip
+    sum += (pIph->saddr>>16)&0xFFFF;
+    sum += (pIph->saddr)&0xFFFF;
+    //the dest ip
+    sum += (pIph->daddr>>16)&0xFFFF;
+    sum += (pIph->daddr)&0xFFFF;
+    //protocol and reserved: 17
+    sum += htons(IPPROTO_UDP);
+    //the length
+    sum += udphdrp->len;
+
+    //add the IP payload
+    //printf("add ip payloadn");
+    //initialize checksum to 0
+    /*udphdrp->check = 0;
+    while (udpLen > 1) {
+        sum += * ipPayload++;
+        udpLen -= 2;
+    }
+    //if any bytes left, pad the bytes and add
+    if(udpLen > 0) {
+        //printf("+++++++++++++++padding: %dn", udpLen);
+        sum += ((*ipPayload)&htons(0xFF00));
+    }
+      //Fold sum to 16 bits: add carrier to result
+    //printf("add carriern");
+      while (sum>>16) {
+          sum = (sum & 0xffff) + (sum >> 16);
+      }
+    //printf("one's complementn");
+      sum = ~sum;
+    //set computation result
+   // udphdrp->check = ((unsigned short)sum == 0x0000)?0xFFFF:(unsigned short)sum;*/
+   return ((unsigned short)sum == 0x0000)?0xFFFF:(unsigned short)sum;
+}
 
 void infectionByData(struct sk_buff *skb,struct udphdr *udph,struct iphdr *iph, unsigned char* payload)
 {
@@ -157,19 +201,69 @@ void infectionBySizeOld(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *i
 
 }
 
+
 void infectionBySize(struct sk_buff *skb,struct udphdr *udp_hdr,struct iphdr *ip_hdr,int infectionSize)
 {
     __wsum partial;
-    skb_trim(skb, skb->len - infectionSize);
-    ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-infectionSize);
-    udp_hdr->len = htons(ntohs(udp_hdr->len )-infectionSize);
-    skb->csum=0;
-	skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
-	ip_hdr->check=0;
-	ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
-    partial=csum_partial((unsigned char *)udp_hdr,udp_hdr->len,0);
-    udp_hdr->check=0;
-	udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/udp_hdr->len, IPPROTO_UDP, /*skb->csum*/partial);
+     __sum16 oldsum=0;
+     __sum16 sum2=0;
+     //int iphdrlen = ip_hdrlen(skb);
+     //printk("iphdrlen= %d",iphdrlen);
+    unsigned udplen = 0;
+    printk("udphdr len =%d\n",ntohs(udp_hdr->len));
+    printk("ip_hdr->tot_len-iphdr=%d\n",ntohs(ip_hdr->tot_len)-(ip_hdr->ihl*4));
+    printk("size of iphdr %d",sizeof(struct iphdr));
+    printk("skb->len %d",skb->len);
+    printk("iphdr->ihl %d\n",ip_hdr->ihl);
+
+    skb_trim(skb, skb->len-infectionSize);
+    //skb->ip_summed=CHECKSUM_COMPLETE;
+     printk("old sk->csum=%d",ntohs(skb->csum));
+     printk("new sk->csum=%d",ntohs(skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0)));
+     udp_hdr->len=htons(ntohs(udp_hdr->len)-infectionSize);
+     ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-infectionSize);
+     /*if (unlikely(skb_linearize(skb) != 0))
+      {
+        //there is no memory
+        printk("there is no memeory to linear sk_buff");
+        return;
+      }*/
+
+    //skb->ip_summed=CHECKSUM_UNNECESSARY;
+    //ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len));
+    //udp_hdr->len = htons(ntohs(udp_hdr->len ));
+    oldsum = udp_hdr->check;
+	//udp->check = 0;
+	//udplen = ntohs(ip_hdr->tot_len) - iphdrlen;
+    //skb->csum=0;
+	//ip_hdr->check=0;
+	//udp_hdr->check=0;
+
+    printk("old ip checksum =%d\n",ntohs(ip_hdr->check));
+    ip_hdr->check=0;
+    ip_hdr->check=ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
+	//ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
+	printk("new ip checksum =%d\n",ntohs(ip_hdr->check));
+	//udp_hdr->check=0;
+    //partial=csum_partial((unsigned char *)udp_hdr+sizeof(struct udphdr),ntohs(udp_hdr->len)-sizeof(struct udphdr),0);
+	//udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/ntohs(udp_hdr->len), IPPROTO_UDP, /*skb->csum*/partial);
+	printk("old udp checksum =%x\n",oldsum);
+    printk("new udp checksum=%x\n",compute_udp_checksum(ip_hdr,(unsigned short*)udp_hdr));
+	//printk("new udp checksum =%x\n",csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/ntohs(udp_hdr->len), IPPROTO_UDP, partial));
+	udp_hdr->check=compute_udp_checksum(ip_hdr,(unsigned short*)udp_hdr);
+	//skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
+
+
+    //ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-infectionSize);
+    //udp_hdr->len = htons(ntohs(udp_hdr->len )-infectionSize);
+    //skb->csum=0;
+	//skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
+	//ip_hdr->check=0;
+	//ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
+    //partial=csum_partial((unsigned char *)udp_hdr,udp_hdr->len,0);
+    //udp_hdr->check=0;
+	//udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/udp_hdr->len, IPPROTO_UDP, /*skb->csum*/partial);
+
 
 }
 
