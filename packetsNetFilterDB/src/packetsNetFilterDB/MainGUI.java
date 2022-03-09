@@ -147,7 +147,7 @@ public class MainGUI extends GUI {
 							}
 							else if(selectedColumn==3)
 							{
-						     if(fireWallTableRules.getValueAt(selectedRow, 3).equals(Boolean.TRUE))
+						     if(fireWallTableRules.getValueAt(selectedRow, 3).equals(Boolean.TRUE))//acivate Rule
 						     {
 									String ip=fireWallTableRules.getModel().getValueAt(selectedRow, 0).toString();
 									int port=Integer.valueOf(fireWallTableRules.getModel().getValueAt(selectedRow, 1).toString());
@@ -168,7 +168,7 @@ public class MainGUI extends GUI {
 										e1.printStackTrace();
 									}
 						     }
-						     else
+						    else  //unActivate rule
 						     {
 									String ip=fireWallTableRules.getModel().getValueAt(selectedRow, 0).toString();
 									int port=Integer.valueOf(fireWallTableRules.getModel().getValueAt(selectedRow, 1).toString());

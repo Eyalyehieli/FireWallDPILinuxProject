@@ -72,7 +72,7 @@ public class StructsFieldsTable {
 		case "INT": return 4;
 		case "DOUBLE": return 8;
 		case "FLOAT":return 4; 
-		case "CHAR":return 2;	
+		case "CHAR":return 1;	
 		case "SHORT":return 2;
 		case "LONG":return 8;
 		}

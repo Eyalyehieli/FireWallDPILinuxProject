@@ -17,7 +17,7 @@ int main()
     struct sockaddr_in  servaddr;
     int sizeServAddr=sizeof(servaddr);
     //yStruct structToSend={0,0.5,1};
-    myStruct structToSend={1,200};
+    myStruct structToSend={1,50,'d'};
     char buffer[1024];
     int n;
 

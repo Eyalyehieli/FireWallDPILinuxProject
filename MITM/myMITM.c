@@ -12,7 +12,7 @@
 #include <linux/cdev.h>
 #include <linux/inet.h>
 #define PORT 8080
-#define SUB_SIZE 0
+#define SUB_SIZE 4
 //TODO:infect the packet
 MODULE_LICENSE("Dual BSD/GPL");
 static dev_t my_dev = 0;
@@ -27,7 +27,7 @@ unsigned short compute_udp_checksum(struct iphdr *pIph, unsigned short *ipPayloa
     struct udphdr *udphdrp = (struct udphdr*)(ipPayload);
     unsigned short udpLen = htons(udphdrp->len);
     //printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~udp len=%dn", udpLen);
-    //add the pseudo header
+    //add sudo gcc -o test main.c list.c sqliteCon.c activeProtocol.c nfqHandle.c structField.c -lnetfilter_queue -lsqlite3 the pseudo header
     //printf("add pseudo headern");
     //the source ip
     sum += (pIph->saddr>>16)&0xFFFF;
