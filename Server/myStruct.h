@@ -7,7 +7,6 @@ typedef struct __attribute__((packed))
 {
    int code;
    int num;
-   char c;
    //double num2;
 }myStruct;
 

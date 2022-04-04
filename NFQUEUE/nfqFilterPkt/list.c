@@ -139,7 +139,7 @@ void *list_next(list *lptr)
  *! FUNCTION:			list_remove
  *!
  *! GENERAL DESCRIPTION: This function remove the element that is pointed out by
- *!						 intenal iterator.
+ *!						 internal iterator.
  *!                      before using it you need to identify (by itertively
  *!                      using list_first and list_next. once you see that the data
  *!                      equal to content that you want to remove you can
@@ -291,5 +291,3 @@ void *list_first(list *lptr)
 	lptr->current->next=lptr->head->next;
 	return(lptr->current? lptr->current->data:0);
 }
-
-

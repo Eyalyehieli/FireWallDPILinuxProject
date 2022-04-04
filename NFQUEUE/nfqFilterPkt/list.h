@@ -211,4 +211,29 @@ void *list_next(list *lptr);
  *!@*/
 void *list_first(list *lptr);
 
+/*!@*****************************************************************************
+ *!
+ *! FUNCTION:			list_free
+ *!
+ *! GENERAL DESCRIPTION: This function free all the elements of the list
+ *!                      include the list pointer itself
+ *!
+ *! Input:				list *lptr - list 's pointer object.
+ *!
+ *! Output:				void
+ *!
+ *! ALGORITHM:			The algorithm is base on the following operations:
+ *!						1. set the iterator to the list 's head.
+ *!						2. free all the elements
+ *!                     3. free the list pointer
+ *!
+ *!
+ *! ASSUMPTIONS:        none
+ *! REMARKS:			none.
+ *!
+ *!*****************************************************************************
+ *!@*/
+
+ //void list_free(list *lptr)
+
 #endif // LIST_H_INCLUDED

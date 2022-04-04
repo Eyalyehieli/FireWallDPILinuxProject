@@ -1,0 +1,79 @@
+package PacketGenerator;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import packetsNetFilterDB.StructsFieldsTable;
+
+public class transmit extends GUI
+{
+	
+	File file;
+	FileReader fileReader;
+	
+	public transmit(int width,int height,String msg,File file) throws IOException
+	{
+		super(width, height, msg);
+		this.file=file;
+		fileReader=new FileReader(file);
+	}
+	
+	@Override
+	public void createGUI()
+	{
+		 JSONParser parser=new JSONParser();
+		 JSONObject existedJsonFile;
+		 JSONArray existedJsonFileAsJsonArray;
+		 JSONArray structFieldsAsJsonArray;
+		 JSONObject currentPacket;
+		 JSONObject currentStructField;
+		 Iterator<JSONObject> packetIterator;
+		 Iterator <JSONObject> structFieldsIterator;
+		 ArrayList<StructFieldsTable> structFields = null;
+		 
+		try
+		{
+			existedJsonFile=(JSONObject)parser.parse(fileReader);
+			existedJsonFileAsJsonArray=(JSONArray)existedJsonFile.get("Packets");
+			packetIterator=existedJsonFileAsJsonArray.iterator();
+			
+			
+			while(packetIterator.hasNext())
+			{
+				currentPacket=packetIterator.next();
+				structFieldsAsJsonArray=(JSONArray)currentPacket.get("Struct Fields");
+				structFieldsIterator=structFieldsAsJsonArray.iterator();
+				while(structFieldsIterator.hasNext())
+				{
+					currentStructField=structFieldsIterator.next();
+					String type=(String) currentStructField.get("Type");
+					Object minRange=currentStructField.get("MinRange");
+					Object maxRange=currentStructField.get("MaxRange");
+					structFields.add(new StructFieldsTable(type,minRange.toString(),maxRange.toString()));
+					sendPacket(currentPacket.get("Port"),currentPacket.get("Ip"),structFields);
+				}
+			}
+		} 
+		catch (IOException | ParseException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public Boolean sendPacket(int port,String ip, ArrayList<StructFieldsTable> structFiedls)
+	{
+		
+		return true;
+	}
+	
+}

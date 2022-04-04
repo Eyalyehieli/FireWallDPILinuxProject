@@ -1,4 +1,0 @@
-file created
-End of readActiveProtocolsFromDB
-End of check_pkt
-ACCEPT packet
