@@ -10,9 +10,12 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 
 public class GUI {
+	//--------properties------------//
 	protected int width;
 	protected int height;
 	protected JFrame frm;
+	
+	//---------C'tor-------------//
 	public GUI(int width,int height,String msg)
 	{
 		this.width=width;
@@ -20,6 +23,7 @@ public class GUI {
 		frm=this.createFrame(msg);
 	}
 	
+	//------functions-----------//
 	public int getWidth() {
 		return width;
 	}

@@ -9,9 +9,8 @@ public class Main {
 
 	public static void main(String[] args) throws SQLException {
 		// TODO Auto-generated method stub
-		//Gui gui=new Gui(1200,800);
-		//gui.createGui();
-		MainGUI mainGUI=new MainGUI(1200,800,"MainGui");
-		mainGUI.createGUI(mainGUI.getFrm());      
+		//------------create mainGui/first window----------------//
+		MainFrm mainFrm =new MainFrm(1000,600,"MainGui");
+		mainFrm.createGUI(mainFrm.getFrm());      
 	}
 }

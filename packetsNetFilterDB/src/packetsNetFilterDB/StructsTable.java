@@ -1,12 +1,17 @@
 package packetsNetFilterDB;
 
+import java.sql.SQLException;
+
 public class StructsTable {
+	
+	//---------properties-----------//
 	private int id;
 	private String name;
 	private int code;
 	private int size;
 	private ProtocolTable protocol;
 	
+	//-------C'tors------------------//
 	public StructsTable(String name,int code, int size, ProtocolTable protocol) {
 		this.name = name;
 		this.code =code;
@@ -26,6 +31,7 @@ public class StructsTable {
 		this.protocol = protocol;
 	}
 	
+	//------------functions---------------//
 	public int getId() {
 		return id;
 	}
@@ -59,6 +65,21 @@ public class StructsTable {
 		this.name = name;
 	}
 	
-	
+	public static StructsTable getStructFromDB (ProtocolTable protocol, String structName,int code,int size,SqliteDB sqlitedb,Boolean IsToForceInsertion,Boolean IsChangeSize)
+	{
+		try
+		{
+			StructsTable struct=new StructsTable(structName,code,size);
+			struct.setProtocol(protocol);
+			struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct,IsToForceInsertion,IsChangeSize));
+			return struct;
+		} 
+		catch (SQLException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
 
 }

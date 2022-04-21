@@ -18,82 +18,72 @@ import javax.swing.table.DefaultTableModel;
 
 public class AddStructGUI extends GUI {
 	
+	//----------properties----------//
 	SqliteDB sqlitedb;
 	String changeToValue;
 	int selectedRow;
 	int selectedColumn;
 	ArrayList<StructsFieldsTable> structFields;
+	//----------C'tor----------//
 	public AddStructGUI(int width,int height,String msg)
 	{
 		super(width,height,msg);
 	}
 	
-	public void createGUI(String StructName,int StructCode,String protocolName,int port,String ip) throws SQLException 
+
+	
+	//----------functions----------//
+	public void createGUI(String StructName,int StructCode,int structSize,String protocolName) throws SQLException 
 	{
 		sqlitedb=SqliteDB.getSqliteDBInstance();
 		DefaultTableModel model=new DefaultTableModel(new Object[]{"Field Name","Type","Min Range","Max Range"},0);
-		JLabel structNameLabel=super.createLabel(this.frm,"Enter the Struct name:",40,50,200,100);
-	    JTextField structNameTextField=super.createTextField(this.frm,300,75,200,50);
-	       
-	    JLabel structCodeLabel=super.createLabel(this.frm, "Enter the struct Code:", 640, 50, 200, 100);
-	    JTextField structCodeTextField=super.createTextField(this.frm, 900, 75, 200, 50);
-		
+		JLabel structNameLabel=super.createLabel(this.frm,"Struct name:",250, 150, 200, 50);
+	    JTextField structNameTextField=super.createTextField(this.frm,350, 150, 200, 50);  
+	    JLabel structSizeLabel=super.createLabel(frm, "Struct size:", 580, 150, 200, 50);
+	    JTextField structSizeTextField=super.createTextField(frm, 680, 150, 200, 50);
+	    JLabel structCodeLabel=super.createLabel(this.frm, "Struct Code:",380, 50, 100, 100);
+	    JTextField structCodeTextField=super.createTextField(this.frm, 500, 75, 200, 50);
 		JLabel structsFieldsLabel=super.createLabel(this.frm, "Struct Fields", 535, 180, 200, 100);
-		
 		JTable structFieldsTable=super.createTable(this.frm, model,325, 280, 500, 500);
-		
-		JButton AddButton=super.createButton(this.frm, "Add", 950, 350, 200, 100);
-		JButton EditButton=super.createButton(this.frm, "Edit", 950, 610, 200, 100);
-		JButton RemoveButton=super.createButton(this.frm, "Remove", 950, 480, 200, 100);
+		JButton AddButton=super.createButton(this.frm, "Add Struct Field", 950, 350, 200, 100);
+		JButton EditButton=super.createButton(this.frm, "Edit Struct Field", 950, 610, 200, 100);
+		JButton RemoveButton=super.createButton(this.frm, "Remove Struct Field", 950, 480, 200, 100);
 		JButton FinishButton=super.createButton(this.frm, "click me if you have finished",850 ,50, 300, 100);
-		FinishButton.setVisible(false);
 		JLabel changeFieldLabel=super.createLabel(this.frm, "Enter new value:",20 ,400,220,50);
 	    JTextField changeFieldLabelTextField=super.createTextField(this.frm, 200, 400, 140, 50);
 	    JButton finishEditButton=super.createButton(this.frm, "Done", 60, 480, 200, 50);
+	    JButton RefreshButton=super.createButton(this.frm, "Ref", 0, 0, 100, 50);
+	    
 	    changeFieldLabel.setVisible(false);
 		changeFieldLabelTextField.setVisible(false);
 		finishEditButton.setVisible(false);
-		JButton RefreshButton=super.createButton(this.frm, "Ref", 0, 0, 100, 50);
-		if(StructName!=""&&StructCode!=Integer.MIN_VALUE)//for edit
+		FinishButton.setVisible(false);
+		
+		//-------check if the frm opened for edit struct-------// 
+		if(isForEditingStruct(StructName,StructCode))
 		{
-			structCodeTextField.setText(String.valueOf(StructCode));
-			structNameTextField.setText(StructName);
-			
-			int code=Integer.valueOf(structCodeTextField.getText()) ;
-			String name=structNameTextField.getText();
-		  	for(int i=0;i<((DefaultTableModel) structFieldsTable.getModel()).getRowCount();i++)
-			  {
-			  	((DefaultTableModel)structFieldsTable.getModel()).removeRow(i);
-			  }
-		  	ProtocolTable protocol=new ProtocolTable(protocolName);
-		  	protocol.setId(sqlitedb.GetProtocolIdByProtocolName(protocol,-1));
-		    StructsTable struct=new StructsTable(name,code,protocol);
-		    struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct, -1,0));
-		    structFields=sqlitedb.GetAllStructFieldsByStructId(struct);
-			/*for(StructsFieldsTable structField:structFields)
-			  {
-				((DefaultTableModel)structFieldsTable.getModel()).addRow(new Object[]{structField.getName(),structField.getType(),structField.getMinRange(),structField.getMaxRange()});
-			  }
-			  */
-		    Refresh.refreshStructFieldsTable(structFieldsTable, structFields);
-			structCodeTextField.setEnabled(false);
-			structNameTextField.setEnabled(false);
+			//-------------The frm opened for edit struct-----------//
+			initialStructFrmForEditing(structSizeTextField,structFieldsTable,structCodeTextField,structNameTextField,StructName,StructCode,structSize,protocolName);
 		}
 	       
+		//--------Event functions---------//
 		RefreshButton.addActionListener(new ActionListener()
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				try {
+				try
+				{
+					//-------set struct vars to get the db data--------//
 					int code=Integer.valueOf(structCodeTextField.getText()) ;
 					String name=structNameTextField.getText();
-					ProtocolTable protocol=new ProtocolTable(protocolName);
-				  	protocol.setId(sqlitedb.GetProtocolIdByProtocolName(protocol,-1));
-				    StructsTable struct=new StructsTable(name,code,protocol);
-				    struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct, -1,0));
+					ProtocolTable protocol=ProtocolTable.getProtocolFromDB(protocolName,false, sqlitedb);
+				    StructsTable struct=StructsTable.getStructFromDB(protocol, name, code, 0, sqlitedb, false, false);
+				    //--------refresh-----------------//
 				    structFields=sqlitedb.GetAllStructFieldsByStructId(struct);
 					Refresh.refreshStructFieldsTable(structFieldsTable, structFields);
-				} catch (SQLException e1) {
+					structSizeTextField.setText(String.valueOf(sqlitedb.GetStructSizeByStructCodeAndProtocol(struct.getCode(),protocol.getId())));
+				} 
+				catch (SQLException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
@@ -101,115 +91,103 @@ public class AddStructGUI extends GUI {
 		});
 		
 		structCodeTextField.getDocument().addDocumentListener(new DocumentListener() {
-			  public void changedUpdate(DocumentEvent e) {
-				  try {
-					  if(structCodeTextField.getText()!="" && structNameTextField.getText()!="")
-					  {
-						  TextChanged();
-					  }
-				} catch (SQLException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+			  public void changedUpdate(DocumentEvent e)
+			  {
+				  checkForChange();
 			  }
-			  public void removeUpdate(DocumentEvent e) {
+			  public void removeUpdate(DocumentEvent e) 
+			  {
+				  checkForChange();
+			  }
+			  public void insertUpdate(DocumentEvent e) 
+			  {
+				  checkForChange();
+			  }
+			  
+			  public void checkForChange()
+			  {
 				  try {
-					  if(structCodeTextField.getText()!="" && structNameTextField.getText()!="")
-					  {
-						  TextChanged();
-					  }
+						//-----------try to find a struct-----------//
+						  if(structCodeTextField.getText()!="")
+						  {
+							  TextChanged();
+						  }
+						 //----------empty TextFields, no struct has written-------//
+						  else
+						  {
+							  structNameTextField.setText("");
+						  }
 					} catch (SQLException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 			  }
-			  public void insertUpdate(DocumentEvent e) {
-				  try {
-					  if(structCodeTextField.getText()!="" && structNameTextField.getText()!="")
-					  {
-						  TextChanged();
-					  }
-				} catch (SQLException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			  }
-
+			  
 			  public void TextChanged() throws SQLException {
-				  
-				  if(structCodeTextField.getText()!="" && structNameTextField.getText()!="")
-				  {
-					/*GUI.deleteAllJtableRows(structFieldsTable);*/
-					int code=Integer.valueOf(structCodeTextField.getText()) ;
-					String name=structNameTextField.getText();
-				  	ProtocolTable protocol=new ProtocolTable(protocolName);
-				  	protocol.setId(sqlitedb.GetProtocolIdByProtocolName(protocol,-1));
-				    StructsTable struct=new StructsTable(name,code,protocol);
-				    struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct, -1,0));
-				    if(struct.getId()!=-1)//if there is struct like this
-				    {
+				 
+				  	structNameTextField.setText("");
+				  	structSizeTextField.setText("");
+				  	GUI.deleteAllJtableRows(structFieldsTable,"StructFieldsTable");
+				  	
+				  	//-------just if structCodeTextField is numeric because otherwise it wouldn't parse to int--------//
+				  	if(isNumeric(structCodeTextField.getText()))
+				  	{
+				  		int code=Integer.valueOf(structCodeTextField.getText());
+				  		String name=structNameTextField.getText();
+					  	ProtocolTable protocol=ProtocolTable.getProtocolFromDB(protocolName,false, sqlitedb);
+					    StructsTable struct=StructsTable.getStructFromDB(protocol, name, code, 0, sqlitedb, false, false);
+					    
+					    //-------- if there is not struct it wouldn't be change---------//
+					    structNameTextField.setText(sqlitedb.getStructNameByProtocolAndStructCode(protocol, code));
+					    structSizeTextField.setText(String.valueOf(sqlitedb.GetStructSizeByStructCodeAndProtocol(code, protocol.getId())));
+					   
+					    //--------//if there is struct like this will be change,otherwise not---------//
 					    structFields=sqlitedb.GetAllStructFieldsByStructId(struct);
-						/*for(StructsFieldsTable structField:structFields)
-						{
-							((DefaultTableModel)structFieldsTable.getModel()).addRow(new Object[]{structField.getName(),structField.getType(),structField.getMinRange(),structField.getMaxRange()});
-						}*/
-					    Refresh.refreshStructFieldsTable(structFieldsTable, structFields);
-				    }
-				    else
-				    {
-				    	GUI.deleteAllJtableRows(structFieldsTable,"StructFieldsTable");
-				    }
-			     }
+						Refresh.refreshStructFieldsTable(structFieldsTable, structFields);
+				  	}
 			  }
 		});
 		
 		 finishEditButton.addActionListener(new ActionListener()
 		   {
-	 	   		  @Override
-	 	   		  public void actionPerformed(ActionEvent e)
-	 	   		  {
-		 	   			  if(selectedRow!=-1)
-		 	   			  {
-			 	   			int structField_id;
-			 	   			changeToValue=changeFieldLabelTextField.getText();
-				 	   		String fieldName=structFieldsTable.getValueAt(selectedRow, 0).toString();
-					  		String type=structFieldsTable.getValueAt(selectedRow, 1).toString();
-					  		String minRange=structFieldsTable.getValueAt(selectedRow, 2).toString();
-					  		String maxRange=structFieldsTable.getValueAt(selectedRow, 3).toString();
-							try
-							{
-								ProtocolTable protocol=new ProtocolTable(protocolName);
-								protocol.setId(sqlitedb.GetProtocolIdByProtocolName(protocol,-1));
-								StructsTable struct=new StructsTable(structNameTextField.getText(),Integer.valueOf(structCodeTextField.getText()),protocol);
-							    struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct, -1,0));
-							    structField_id=sqlitedb.GetStructFieldId(new StructsFieldsTable(fieldName,type,minRange,maxRange,struct),-1);
-							    structFieldsTable.setValueAt(changeToValue, selectedRow, selectedColumn);
-							    fieldName=structFieldsTable.getValueAt(selectedRow, 0).toString();
-						  		type=structFieldsTable.getValueAt(selectedRow, 1).toString();
-						  		minRange=structFieldsTable.getValueAt(selectedRow, 2).toString();
-						  		maxRange=structFieldsTable.getValueAt(selectedRow, 3).toString();
-						  		if(checkValidationStructFieldName(new StructsFieldsTable(fieldName,struct))==false)
-						  		{
-						  			sqlitedb.updateStructField(structField_id,fieldName,type,minRange,maxRange);
-						  		}
-						  		else
-						  		{
-						  			JOptionPane.showMessageDialog(null, "Wrong Values, try again");
-						  		}
+	 	   	 @Override
+	 	   	 public void actionPerformed(ActionEvent e)
+	 	   	 {
+	 	   		 //---------table cell was selected for editing----------//
+		 	   	 if(selectedRow!=-1)
+		 	   	{
+		 	   		try
+					{
+				 	   	int structField_id;
+				 	   	changeToValue=changeFieldLabelTextField.getText();
 				 	   			
-					 	   		changeFieldLabel.setVisible(false);
-					   			changeFieldLabelTextField.setVisible(false);
-					   		    finishEditButton.setVisible(false);
+				 	   	//-------extracr data to get structField id for checking structField duality-------//
+					 	String fieldName=structFieldsTable.getValueAt(selectedRow, 0).toString();
+				  		String type=structFieldsTable.getValueAt(selectedRow, 1).toString();
+				  		String minRange=structFieldsTable.getValueAt(selectedRow, 2).toString();
+				  		String maxRange=structFieldsTable.getValueAt(selectedRow, 3).toString();
+								
+				  		//-----get the struct field id of the struct field to change/the selected struct field-----//
+						ProtocolTable protocol=ProtocolTable.getProtocolFromDB(protocolName,false, sqlitedb);
+						StructsTable struct=StructsTable.getStructFromDB(protocol, structNameTextField.getText(),Integer.valueOf(structCodeTextField.getText()), 0, sqlitedb, false, false);	
+					    structField_id=sqlitedb.GetStructFieldId(new StructsFieldsTable(fieldName,type,minRange,maxRange,struct),false);
+							   
+					    //-------check if there is struct field in this struct with the same fields------//
+					    checkForStructFieldDuality(structFieldsTable,struct ,structField_id);
 				 	   			
-							} 
-							catch (SQLException e1)
-							{
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-		 	   		  }
-	 	   		  }
-	 		   });
+				   		changeFieldLabel.setVisible(false);
+			   			changeFieldLabelTextField.setVisible(false);
+			   		    finishEditButton.setVisible(false);
+				 	   			
+					} 
+					catch (SQLException e1)
+					{
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+		 	   	 }
+	 	   	 }
+	 	  });
 	       
 	       EditButton.addActionListener(new ActionListener()
 		   {
@@ -218,9 +196,10 @@ public class AddStructGUI extends GUI {
 	   		  {
 	   			selectedRow=structFieldsTable.getSelectedRow();
 	   			selectedColumn=structFieldsTable.getSelectedColumn();
+	   			
+	   		  //---------table cell was selected for editing----------//
 	   			if(selectedRow!=-1)
 	   			{
-	   			//String fieldToChange=structFieldsTable.getModel().getValueAt(selectedRow,selectedColumn).toString();
 	   		    String fieldName=structFieldsTable.getModel().getColumnName(selectedColumn).toString();
 	   			changeFieldLabel.setVisible(true);
 	   			changeFieldLabelTextField.setVisible(true);
@@ -228,67 +207,61 @@ public class AddStructGUI extends GUI {
 	   		    changeFieldLabel.setText("Enter new "+fieldName+":");
 	   			}
 	   		  }
-		   }
-		   );
+		   });
 		
 		RemoveButton.addActionListener(new ActionListener()
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-			  	try {
-			  		int structField_id;
-			  		int selected_row=structFieldsTable.getSelectedRow();
-			  		String fieldName=structFieldsTable.getValueAt(selected_row, 0).toString();
-			  		String type=structFieldsTable.getValueAt(selected_row, 1).toString();
-			  		String minRange=structFieldsTable.getValueAt(selected_row, 2).toString();
-			  		String maxRange=structFieldsTable.getValueAt(selected_row, 3).toString();
-			  		ProtocolTable protocol=new ProtocolTable(protocolName);
-					protocol.setId(sqlitedb.GetProtocolIdByProtocolName(protocol,-1));
-					StructsTable struct=new StructsTable(structNameTextField.getText(),Integer.valueOf(structCodeTextField.getText()),protocol);
-				    struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct, -1,0));
-				    structField_id=sqlitedb.GetStructFieldId(new StructsFieldsTable(fieldName,type,minRange,maxRange,struct),-1);
-				    sqlitedb.DeleteStructFieldById(structField_id);
-				    ((DefaultTableModel)structFieldsTable.getModel()).removeRow(selected_row);
-				} catch (SQLException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			    
+			  	int selected_row=structFieldsTable.getSelectedRow();
+				String fieldName=structFieldsTable.getValueAt(selected_row, 0).toString();
+				String type=structFieldsTable.getValueAt(selected_row, 1).toString();
+				String minRange=structFieldsTable.getValueAt(selected_row, 2).toString();
+				String maxRange=structFieldsTable.getValueAt(selected_row, 3).toString();
+				removeStructField(structFieldsTable,protocolName,structSizeTextField,structNameTextField, structCodeTextField,fieldName,type, minRange,maxRange,selected_row); 
 			}
-		}
-		);
+		});
 		
 		AddButton.addActionListener(new ActionListener()
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				AddStructFieldGUI addStructFieldGUI=new AddStructFieldGUI(1200,800,"Add Struct");
-				try {
-					addStructFieldGUI.createGUI(Integer.valueOf(structCodeTextField.getText()),structNameTextField.getText(),protocolName,port,ip);
-					/*for(int i=0;i<((DefaultTableModel) structFieldsTable.getModel()).getRowCount();i++)
-				  	{
-				  		((DefaultTableModel) structFieldsTable.getModel()).removeRow(i);
-				  	}
-				  	ProtocolTable protocol=new ProtocolTable(protocolName);
-				  	protocol.setId(sqlitedb.GetProtocolIdByProtocolName(protocol,-1));
-				    StructsTable struct=new StructsTable(structNameTextField.getText(),Integer.valueOf(structCodeTextField.getText()),protocol);
-				    struct.setId(sqlitedb.GetStructIdByCodeAndProtocol(struct, -1));
-				    structFields=sqlitedb.GetAllStructFieldsByStructId(struct);
-					for(StructsFieldsTable structField:structFields)
+				try 
+				{
+					//----new StructField frm to commit new strcut fields to struct---------//
+					ProtocolTable protocol=ProtocolTable.getProtocolFromDB(protocolName,false, sqlitedb);
+					StructsTable struct=StructsTable.getStructFromDB(protocol,structNameTextField.getText(),Integer.valueOf(structCodeTextField.getText()), 0, sqlitedb, false, false);
+					if(isForEditingStruct(StructName,StructCode))
 					{
-						((DefaultTableModel) structFieldsTable.getModel()).addRow(new Object[]{structField.getName(),structField.getType(),structField.getMinRange(),structField.getMaxRange()});
-					}*/
-					
-				} catch (SQLException e1) {
-					// TODO Auto-generated catch block
+						//-------the frm is created for edit struct------//
+						AddStructFieldGUI addStructFieldGUI=new AddStructFieldGUI(1200,800,"Add Struct");
+						addStructFieldGUI.createGUI(Integer.valueOf(structCodeTextField.getText()),structNameTextField.getText(),protocolName);
+					}
+					else
+					{
+			//-------the frm is created for add struct so need to check validation---------//
+						//------check if occupied struct meta data has written---------//
+						if(!isOccupiedStructMetaData(struct))
+						{
+							//-----the struct code and struct name isn't occupied-------//
+							AddStructFieldGUI addStructFieldGUI=new AddStructFieldGUI(1200,800,"Add Struct");
+							addStructFieldGUI.createGUI(Integer.valueOf(structCodeTextField.getText()),structNameTextField.getText(),protocolName);
+						}
+						else
+						{
+							//-------the struct code or the struct name or both are occupied-------//
+							JOptionPane.showMessageDialog(null, "Occupied struct code ot struct name, please try again");
+						}
+					}
+				} 
+				catch (SQLException e1) 
+				{
 					JOptionPane.showMessageDialog(null, e1.toString());
 				}
 			}
-		}
-		);
+		});
 	       
-	      
-	       
+	     
 	       this.frm.setLayout(null); 
 	       this.frm.setSize(this.width,this.height);   
 	       this.frm.setVisible(true);
@@ -296,7 +269,126 @@ public class AddStructGUI extends GUI {
 
 	}
 	
-	public Boolean checkValidationStructFieldName(StructsFieldsTable structField)
+	
+	public boolean isNumeric(String strNum) {
+	    if (strNum == null) 
+	    {
+	        return false;
+	    }
+	    try
+	    {
+	        int num = Integer.parseInt(strNum);
+	    } 
+	    catch (NumberFormatException nfe)
+	    {
+	        return false;
+	    }
+	    return true;
+	}
+	
+	public boolean isOccupiedStructMetaData(StructsTable struct)
+	{
+		try
+		{
+			return sqlitedb.IsExistValidationStrcutName(struct)|| sqlitedb.IsExistValidationStrcutCode(struct);
+		} 
+		catch (SQLException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return true;
+	}
+	
+	public boolean isForEditingStruct(String structName,int structCode)
+	{
+		return structName!=""&&structCode!=Integer.MIN_VALUE;
+	}
+	
+	public void initialStructFrmForEditing(JTextField structSizeTextField,JTable structFieldsTable ,JTextField structCodeTextField,JTextField structNameTextField,String StructName,int StructCode,int structSize,String protocolName)
+	{
+		try 
+		{
+			structCodeTextField.setText(String.valueOf(StructCode));
+			structNameTextField.setText(StructName);
+			structSizeTextField.setText(String.valueOf(structSize));
+			
+			int code=StructCode;
+			String name=StructName;
+			//-----------display struct meta data---------//
+		  	ProtocolTable protocol=	ProtocolTable.getProtocolFromDB(protocolName,false, sqlitedb);
+		    StructsTable struct=StructsTable.getStructFromDB(protocol, name, code, 0, sqlitedb, false, false);
+		    structFields=sqlitedb.GetAllStructFieldsByStructId(struct);
+			Refresh.refreshStructFieldsTable(structFieldsTable, structFields);
+			structCodeTextField.setEnabled(false);
+			structNameTextField.setEnabled(false);
+			structSizeTextField.setEnabled(false);
+		}
+		catch (SQLException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	   
+	}
+	
+	public void checkForStructFieldDuality(JTable structFieldsTable,StructsTable struct ,int structField_id)
+	{
+		try 
+		{
+			structFieldsTable.setValueAt(changeToValue, selectedRow, selectedColumn);
+		    String fieldName=structFieldsTable.getValueAt(selectedRow, 0).toString();
+	  		String type=structFieldsTable.getValueAt(selectedRow, 1).toString();
+	  		String minRange=structFieldsTable.getValueAt(selectedRow, 2).toString();
+	  		String maxRange=structFieldsTable.getValueAt(selectedRow, 3).toString();
+	  		if(checkValidationStructFieldName(new StructsFieldsTable(fieldName,type,minRange,maxRange,struct))==false)
+	  		{
+	  			
+				sqlitedb.updateStructField(structField_id,fieldName,type,minRange,maxRange);
+				SqliteDB.sendSignalToNfqFIreWall();
+			} 
+	  		else
+	  		{
+	  			JOptionPane.showMessageDialog(null, "Wrong Values, try again");
+	  		}
+		}
+  		catch (SQLException e) 
+  		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+  	}
+  		
+	public void removeStructField(JTable structFieldsTable,String protocolName,JTextField structSizeTextField,JTextField structNameTextField,JTextField structCodeTextField,String fieldName,String type,String minRange,String maxRange,int selected_row)
+	{
+		 try 
+		 {		
+			 	sqlitedb.beginTransaction();
+			 	int structField_id;
+				ProtocolTable protocol=ProtocolTable.getProtocolFromDB(protocolName,false, sqlitedb);
+				StructsTable struct=StructsTable.getStructFromDB(protocol,structNameTextField.getText(),Integer.valueOf(structCodeTextField.getText()),0 ,sqlitedb, false, false);
+				structField_id=sqlitedb.GetStructFieldId(new StructsFieldsTable(fieldName,type,minRange,maxRange,struct),false);
+				sqlitedb.DeleteStructFieldById(structField_id);
+				sqlitedb.updateStructSize(struct, sqlitedb.GetStructSizeByStructCodeAndProtocol(struct.getCode(), protocol.getId()), StructsFieldsTable.getSizeOfTypeInBits(type));
+				sqlitedb.commitTransaction();
+				structSizeTextField.setText(String.valueOf(sqlitedb.GetStructSizeByStructCodeAndProtocol(struct.getCode(), protocol.getId())));
+				((DefaultTableModel)structFieldsTable.getModel()).removeRow(selected_row);
+				SqliteDB.sendSignalToNfqFIreWall();
+		 } 
+		 catch (SQLException e) 
+		 {
+			// TODO Auto-generated catch block
+			 try {
+				sqlitedb.rollbackTransaction();
+			} catch (SQLException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			e.printStackTrace();
+		}
+	}
+	
+	public boolean checkValidationStructFieldName(StructsFieldsTable structField)
 	{
 		try
 		{

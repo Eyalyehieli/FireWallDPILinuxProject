@@ -1,6 +1,7 @@
 package packetsNetFilterDB;
 
 public class StructsFieldsTable {
+	//-----------properties----------//
 	private int id;
 	private String name;
 	private String type;
@@ -8,6 +9,7 @@ public class StructsFieldsTable {
 	private String maxRange;
 	private StructsTable struct;
 	
+	//-----------C'tors---------------//
 	public StructsFieldsTable(String name, String type, String minRange, String maxRange, StructsTable struct) {
 		this.name = name;
 		this.type = type;
@@ -28,6 +30,8 @@ public class StructsFieldsTable {
 		this.name=name;
 		this.struct=struct;
 	}
+	
+	//----------functions-------------//
 	public int getId() {
 		return id;
 	}

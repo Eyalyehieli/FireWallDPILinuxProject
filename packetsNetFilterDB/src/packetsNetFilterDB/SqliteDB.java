@@ -1,4 +1,5 @@
 package packetsNetFilterDB;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -8,16 +9,18 @@ import javax.swing.JTextField;
 import org.sqlite.SQLiteConfig;
 public class SqliteDB 
 {
-	// TODO: USING class.classToLongBits 
+	//---------properties---------//
 	private static SqliteDB sqlitedb=null;
 	private Connection con;
-	final int QUERY_SIZE=1024;
+	private int transactionLevel = 0;
 	
+	//-----------C'tor----------------//
 	public SqliteDB(String url) throws SQLException
 	{
 		con=DriverManager.getConnection(url);
 		con.createStatement().execute("PRAGMA foreign_keys = ON");
 	}
+	//-------------singleton implementation-------------//
 	public synchronized static SqliteDB getSqliteDBInstance() throws SQLException
 	{
 		if(sqlitedb==null)
@@ -26,15 +29,14 @@ public class SqliteDB
 		}
 		return sqlitedb;
 	}
-	//
+	
+	//---------------functions-------------------//
 	public boolean createTable(String tableName,String fields)throws SQLException
 	{
 		boolean res=false;
 		try {
 		Statement stmt=con.createStatement();
 		con.setAutoCommit(true);
-		//stmt.executeUpdate("PRAGMA foreign_keys = ON");
-		//stmt.executeUpdate("DROP TABLE IF EXISTS "+ tableName);
 		stmt.executeUpdate("CREATE TABLE IF NOT EXISTS "+tableName+" ("+fields+")");
 		res= true;
 		}
@@ -77,6 +79,26 @@ public class SqliteDB
 		return fireWallRules;
 	}
 	
+	public void DeleteAllFireWallRulesOfProtocol(ProtocolTable protocol) throws SQLException
+	{
+		String deleteQuery="DELETE FROM FireWallRules\n" + 
+				"WHERE protocol_id=?";
+		PreparedStatement prpStmt=con.prepareStatement(deleteQuery);
+		prpStmt.setInt(1, protocol.getId());
+		prpStmt.executeUpdate();
+		prpStmt.close();
+	}
+	
+	public void DeleteAllFireWallRulesOfConnection(ConnectionTable connection) throws SQLException
+	{
+		String deleteQuery="DELETE FROM FireWallRules\n" + 
+				"WHERE connection_id=?";
+		PreparedStatement prpStmt=con.prepareStatement(deleteQuery);
+		prpStmt.setInt(1, connection.getId());
+		prpStmt.executeUpdate();
+		prpStmt.close();
+	}
+	
 	public void DeleteFireWallRuleById(int fireWallRuleId) throws SQLException
 	{
 		String deleteQuery="DELETE FROM FireWallRules\n" + 
@@ -100,15 +122,17 @@ public class SqliteDB
 		prpStmt.setInt(1, fireWallRuleId);
 		prpStmt.executeUpdate();
 		
-		while(rsProtocols.next())
+		/*while(rsProtocols.next())
 		{
 			DeleteProtocolById(rsProtocols.getInt("protocol_id"));
 		}
-		
+		*/
+		/*
 		while(rsConnections.next())
 		{
 			DeleteConnectionById(rsConnections.getInt("connection_id"));
 		}
+		*/
 		prpStmt.close();
 		rsProtocols.close();
 		rsConnections.close();
@@ -233,8 +257,7 @@ public class SqliteDB
 		id= rs.getInt("lastInsertionId");
 		stmt.close();
 		rs.close();
-		return id;
-		
+		return id;	
 	}
 	
 	public int createConnnectionRow(String ip,int port) throws SQLException
@@ -324,7 +347,7 @@ public class SqliteDB
 		return id;
 	}
 	
-	public int GetFireWallRulesId(FIreWallRulesTable fireWallRules,int IsToForceInsertion) throws SQLException
+	public int GetFireWallRulesId(FIreWallRulesTable fireWallRules,Boolean IsToForceInsertion) throws SQLException
 	{
 		ResultSet rs;
 		int id;
@@ -342,14 +365,14 @@ public class SqliteDB
 		}
 		else
 		{
-			if(IsToForceInsertion==-1)return -1;
+			if(IsToForceInsertion==false)return -1;
 			id= createFireWallRulesRow(fireWallRules);
 		}
 		rs.close();
 		return id;
 	}
 	
-	public int GetStructFieldId(StructsFieldsTable structField,int IsToForceInsertion) throws SQLException
+	public int GetStructFieldId(StructsFieldsTable structField,Boolean IsToForceInsertion) throws SQLException
 	{
 		ResultSet rs;
 		int id;
@@ -367,14 +390,14 @@ public class SqliteDB
 		}
 		else
 		{
-			if(IsToForceInsertion==-1)return -1;
+			if(IsToForceInsertion==false)return -1;
 			id= createStructFieldRow(structField);
 		}
 		rs.close();
 		return id;
 	}
 	
-	public int GetStructIdByCodeAndProtocol(StructsTable struct,int IsToForceInsertion,int IsChangeSize) throws SQLException
+	public int GetStructIdByCodeAndProtocol(StructsTable struct,Boolean IsToForceInsertion,Boolean IsChangeSize) throws SQLException
 	{
 		ResultSet rs;
 		int id,size=0;
@@ -392,7 +415,7 @@ public class SqliteDB
 		if(rs.getRow()>0)
 		{
 			id= rs.getInt("id");
-			if(IsChangeSize==1)
+			if(IsChangeSize==true)
 			{
 				size=this.GetStructSizeByStructCodeAndProtocol(struct.getCode(),struct.getProtocol().getId());
 				size+=struct.getSize();
@@ -405,7 +428,7 @@ public class SqliteDB
 		}
 		else
 		{
-			if(IsToForceInsertion==-1)return -1;
+			if(IsToForceInsertion==false)return -1;
 			id= createStrcutsRow(struct);
 		}
 		prpStmt.close();
@@ -413,7 +436,7 @@ public class SqliteDB
 		return id;
 	}
 	
-	public int GetConnectionIdByIpAndPort(ConnectionTable connection,int IsToForceInsertion) throws SQLException
+	public int GetConnectionIdByIpAndPort(ConnectionTable connection,Boolean IsToForceInsertion) throws SQLException
 	{
 		ResultSet rs;
 		int id;
@@ -431,20 +454,52 @@ public class SqliteDB
 		}
 		else
 		{
-			if(IsToForceInsertion==-1)return -1;
+			if(IsToForceInsertion==false)return -1;
 			id= createConnnectionRow(connection.getIp(),connection.getPort());
 		}
 		rs.close();
 		return id;
 	}
 	
-	public int GetProtocolIdByProtocolName(ProtocolTable protocol,int IsToForceInsertion) throws SQLException
+	public int GetProtocolIdByProtocolName(ProtocolTable protocol,int port,Boolean IsToForceInsertion) throws SQLException
 	{
 		ResultSet rs;
 		int id;
-		String query="SELECT id\n" + 
-				     "FROM Protocols\n" + 
-				     "where name LIKE ?";
+		String query="SELECT Protocols.id\n" + 
+				"FROM Protocols \n" + 
+				"INNER JOIN FireWallRules\n" + 
+				"ON Protocols.id=FireWallRules.protocol_id\n" + 
+				"INNER JOIN Connections\n" + 
+				"ON Connections.id=FireWallRules.connection_id\n" + 
+				"WHERE Protocols.name LIKE ? AND Connections.port = ?";
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setString(1, protocol.getName());
+		prpStmt.setInt(2, port);
+		rs=prpStmt.executeQuery();
+		rs.next();
+		if(rs.getRow()>0)
+		{
+			id= rs.getInt("id");
+			
+		}
+		else
+		{
+			if(IsToForceInsertion==false)return -1;
+			id= createProtocolRow(protocol.getName());
+		}
+		rs.close();
+		prpStmt.close();
+		return id;
+	}
+	
+
+	public int GetProtocolIdByProtocolName(ProtocolTable protocol,Boolean IsToForceInsertion) throws SQLException
+	{
+		ResultSet rs;
+		int id;
+		String query="SELECT Protocols.id\n" + 
+				"FROM Protocols \n" + 
+				"WHERE Protocols.name LIKE ?";
 		PreparedStatement prpStmt=con.prepareStatement(query);
 		prpStmt.setString(1, protocol.getName());
 		rs=prpStmt.executeQuery();
@@ -456,7 +511,7 @@ public class SqliteDB
 		}
 		else
 		{
-			if(IsToForceInsertion==-1)return -1;
+			if(IsToForceInsertion==false)return -1;
 			id= createProtocolRow(protocol.getName());
 		}
 		rs.close();
@@ -507,18 +562,15 @@ public class SqliteDB
 		return protocolName;
 	}
 	
-	public String getIpByProtocolId(int protocol_id) throws SQLException
+	public String getIpByPort(int port) throws SQLException
 	{
 		ResultSet rs;
 		String ip;
 		String query="SELECT ip \n" + 
-				"FROM FireWallRules fireWallR INNER JOIN Protocols p\n" + 
-				"ON fireWallR.protocol_id=p.id\n" + 
-				"INNER JOIN Connections c \n"+ 
-				"ON fireWallR.connection_id=c.id\n" +
-				"WHERE p.id=?";
+				"FROM Connections\n"+
+				"WHERE port=?";
 		PreparedStatement prpStmt=con.prepareStatement(query);
-		prpStmt.setInt(1, protocol_id);
+		prpStmt.setInt(1, port);
 		rs=prpStmt.executeQuery();
 		//if(!rs.isClosed())
 		//{
@@ -553,6 +605,31 @@ public class SqliteDB
 		return port;
 	}
 	
+	
+	public void updateProtocol(ProtocolTable protocol,String newName) throws SQLException
+	{
+		String query="UPDATE Protocols \n" +
+				"SET name=?\n" +
+				"WHERE id=?";
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setString(1,newName);
+		prpStmt.setInt(2,protocol.getId());
+		prpStmt.executeUpdate();
+		prpStmt.close();
+	}
+	
+	public void updatePort(ConnectionTable connection,int port) throws SQLException
+	{
+		String query="UPDATE Connections \n" +
+				"SET port=?\n" +
+				"WHERE id=?";
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setInt(1,port);
+		prpStmt.setInt(2,connection.getId());
+		prpStmt.executeUpdate();
+		prpStmt.close();
+	
+	}
 	public void updateFireWallRule(FIreWallRulesTable fireWallRule, int activeStatus) throws SQLException
 	{
 		String query="UPDATE FireWallRules \n" +
@@ -639,6 +716,33 @@ public class SqliteDB
 		prpStmt.setInt(5,structField_id);
 		prpStmt.executeUpdate();
 		prpStmt.close();
+	}
+	
+	public Boolean IsExistValidationFireWallRUle(ProtocolTable protocol,ConnectionTable connection) throws SQLException
+	{
+		String query="SELECT *\n" + 
+				"FROM Protocols\n" + 
+				"INNER JOIN FireWallRules\n" + 
+				"ON Protocols.id=FireWallRules.protocol_id\n" + 
+				"INNER JOIN Connections\n" + 
+				"ON Connections.id=FireWallRules.connection_id\n" + 
+				"WHERE Protocols.id=? AND Connections.id=?";
+		ResultSet rs;
+		Boolean flag=false;
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setInt(1, protocol.getId());
+		prpStmt.setInt(2, connection.getId());
+		rs=prpStmt.executeQuery();
+		rs.next();
+		if(rs.getRow()>0)
+		{
+			flag=true;
+			//System.out.println("THere is protocol");
+		}
+		
+		rs.close();
+		prpStmt.close();
+		return flag;
 	}
 	public Boolean IsExsistValidatioProtocol(ProtocolTable protocol) throws SQLException
 	{
@@ -742,13 +846,17 @@ public class SqliteDB
 				"ON Protocols.id=Structs.protocol_id\n" + 
 				"INNER JOIN StructFields\n" + 
 				"ON Structs.id=StructFields.struct_id\n" + 
-				"WHERE Protocols.id= ? AND Structs.id = ? AND StructFields.fieldName LIKE ?";
+				"WHERE Protocols.id= ? AND Structs.id = ? AND StructFields.fieldName LIKE ? AND StructFields.type LIKE ? \n"+
+				"AND StructFields.minRange LIKE ? AND StructFields.maxRange LIKE ?";
 		ResultSet rs;
 		Boolean flag=false;
 		PreparedStatement prpStmt=con.prepareStatement(query);
 		prpStmt.setInt(1, StructField.getStruct().getProtocol().getId());
 		prpStmt.setInt(2, StructField.getStruct().getId());
 		prpStmt.setString(3, StructField.getName());
+		prpStmt.setString(4, StructField.getType());
+		prpStmt.setString(5, StructField.getMinRange());
+		prpStmt.setString(6, StructField.getMaxRange());
 		rs=prpStmt.executeQuery();
 		rs.next();
 		if(rs.getRow()>0)
@@ -761,5 +869,113 @@ public class SqliteDB
 		prpStmt.close();
 		return flag;
 	}
+	
+	public String getStructNameByProtocolAndStructCode(ProtocolTable protocol,int structCode) throws SQLException
+	{
+		String query="SELECT name \n" + 
+				"FROM Structs\n" + 
+				"WHERE code=? AND protocol_id=?";
+		ResultSet rs;
+		String structName;
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setInt(1, structCode);
+		prpStmt.setInt(2, protocol.getId());
+		rs=prpStmt.executeQuery();
+		rs.next();
+		structName=rs.getString("name");
+		prpStmt.close();
+		rs.close();
+		return structName;
+	}
+	
+	public void updateStructSize(StructsTable struct,int size,int sizeToSub) throws SQLException
+	{
+		String query="UPDATE Structs \n" +
+				"SET size=?\n" +
+				"WHERE id=?";
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setInt(1,size-sizeToSub);
+		prpStmt.setInt(2,struct.getId());
+		prpStmt.executeUpdate();
+		prpStmt.close();
+	}
+	
+	public ArrayList<String> getAllProtocols() throws SQLException
+	{
+		ArrayList<String> protocols=new ArrayList<String>();
+		
+		String query="SELECT name\n" + 
+				"FROM Protocols";
+		ResultSet rs;
+		Statement stmt=con.createStatement();
+		rs=stmt.executeQuery(query);
+		while(rs.next())
+		{
+			protocols.add(rs.getString("name"));
+		}
+		stmt.close();
+		rs.close();
+		return protocols;
+	}
+	public ArrayList<ConnectionTable> getAllConnections() throws SQLException
+	{
+		ArrayList<ConnectionTable> ports=new ArrayList<ConnectionTable>();
+		
+		String query="SELECT ip,port \n" + 
+				"FROM Connections";
+		ResultSet rs;
+		Statement stmt=con.createStatement();
+		rs=stmt.executeQuery(query);
+		while(rs.next())
+		{
+			ports.add(new ConnectionTable(rs.getString("ip"),rs.getInt("port")));
+		}
+		stmt.close();
+		rs.close();
+		return ports;
+	}
+	
+	public static void sendSignalToNfqFIreWall()
+	{
+		String[] killCmd= {"/bin/bash","-c","echo Eyal1234| sudo -S pkill -SIGUSR1 nfq"};
+		Process pb=null;
+		 try 
+		 {
+			 pb = Runtime.getRuntime().exec(killCmd);
+			 Thread.sleep(20);
+		 } 
+		 catch (IOException|InterruptedException e)  {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		pb.destroy();
+	}
+	
+	public void beginTransaction() throws SQLException 
+	{
+		transactionLevel += 1;
+		con.setAutoCommit(false);
+	}
+	
+	public void commitTransaction() throws SQLException 
+	{
+		if(transactionLevel==0)
+		{
+			throw new SQLException("You are not it transaction");
+		}
+		transactionLevel -= 1;
+		if (transactionLevel == 0) { 
+			con.commit();
+			con.setAutoCommit(true);
+		}
+	}
+	
+	public void rollbackTransaction() throws SQLException 
+	{
+		transactionLevel = 0;
+		con.rollback();
+		con.setAutoCommit(true);
+	}
+	
 }
 

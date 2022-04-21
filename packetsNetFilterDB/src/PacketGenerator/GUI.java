@@ -10,15 +10,20 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 
 public class GUI {
+	//--------properties------------//
 	protected int width;
 	protected int height;
 	protected JFrame frm;
+	
+	//-------C'tor-----------------//
 	public GUI(int width,int height,String msg)
 	{
 		this.width=width;
 		this.height=height;
 		frm=this.createFrame(msg);
 	}
+	
+	//-----------functions-------------//
 	
 	public int getWidth() {
 		return width;
@@ -44,6 +49,11 @@ public class GUI {
 		this.frm = frm;
 	}
 
+	public void createGui() 
+	{
+		System.out.println("in basic create GUI func");	
+	}
+	
 	public void createGUI() throws SQLException
 	{
 	    System.out.println("in create GUI func");	
@@ -92,7 +102,6 @@ public class GUI {
 		panel.setBounds(x, y, width, height);
 		JTable table=new JTable(model);
 		table.setBounds(x, y, width, height);
-		//table.setPreferredScrollableViewportSize(table.getPreferredSize());
 		panel.add(new JScrollPane(table));
 		frm.add(panel);
 		return table;
@@ -105,7 +114,6 @@ public class GUI {
 		panel.setBounds(x, y, width, height);
 		JTable table=new JTable(data,columnNames);
 		table.setBounds(x, y, width, height);
-		//table.setPreferredScrollableViewportSize(table.getPreferredSize());
 		panel.add(new JScrollPane(table));
 		frm.add(panel);
 		return table;
@@ -125,6 +133,4 @@ public class GUI {
 		JFrame frm=new JFrame(messIn);
 		return frm;
 	}
-	
-
 }

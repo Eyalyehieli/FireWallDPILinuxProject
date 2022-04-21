@@ -9,25 +9,27 @@ import org.json.simple.*;
 import javax.swing.*;
 
 public class createJsonFileGui extends GUI {
-	
+	//--------------properties------------//
 	FileWriter fileWriter;
-	JSONObject rootObject;
 	
+	//------------c'tor-------------------//
 	public createJsonFileGui(int width,int height,String msg)
 	{
 		super(width, height, msg);
 	}
 
+	//----------------functions----------------//
 	@Override
 	public void createGUI() 
 	{
+		//---------------Setting Vars--------------------//
 		JLabel fileNameLabel=super.createLabel(frm, "Enter File Name:", 150, 100, 200, 100);
 		JTextField fileNameTextField=super.createTextField(frm, 300, 130, 300, 50);
 		JLabel filePathLabel=super.createLabel(frm, "Enter File Path:", 150, 250, 200, 100);
 		JTextField filePathTextField=super.createTextField(frm, 300, 280, 400, 50);
 		JButton createBtn=super.createButton(frm, "Create", 300, 400, 200, 100);
-		rootObject=new JSONObject();
 		
+		//---------------Event functions-------------------//
 		createBtn.addActionListener(new ActionListener()
 				{
 					public void actionPerformed(ActionEvent e)
@@ -37,18 +39,12 @@ public class createJsonFileGui extends GUI {
 						filePath+="/"+fileName;
 						try
 						{
-							fileWriter=new FileWriter(filePath);
-							JSONObject packetsAsJson=new JSONObject();
-							JSONArray packetsList=new JSONArray();
-							packetsAsJson.put("Packets", packetsList);
-							fileWriter.write(packetsAsJson.toJSONString());
-							fileWriter.flush();
+							createPakcetsJsonFile(filePath);
 							fileWriter.close();
 							JOptionPane.showMessageDialog(null, "Succefffuly created");
 							frm.dispose();
 						}
-						catch (IOException e1) 
-						{
+						catch (IOException e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
@@ -58,7 +54,16 @@ public class createJsonFileGui extends GUI {
 		frm.setLayout(null); 
 		frm.setSize(this.width,this.height);   
 		frm.setVisible(true);
-		frm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frm.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	
+	}
+	public void createPakcetsJsonFile(String filePath) throws IOException
+	{
+		JSONObject packetsAsJson=new JSONObject();
+		JSONArray packetsList=new JSONArray();
+		fileWriter=new FileWriter(filePath);
+		packetsAsJson.put("Packets", packetsList);
+		fileWriter.write(packetsAsJson.toJSONString());
+		fileWriter.flush();
 	}
 }

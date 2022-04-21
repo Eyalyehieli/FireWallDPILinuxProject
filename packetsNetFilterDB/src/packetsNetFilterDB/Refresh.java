@@ -9,26 +9,16 @@ import org.omg.CORBA.DATA_CONVERSION;
 
 public class Refresh {
 	
-	
+	//--------------functions--------------------//
 	public static void refreshFireWallTable(JTable table,ArrayList<FIreWallRulesTable> data)
 	{
-		//System.out.println("before"+table.getModel().getRowCount());
 		GUI.deleteAllJtableRows(table,"FireWallTable");
 		Boolean isActive;
-		//System.out.println("data size: "+data.size());
 		for(FIreWallRulesTable fireWallRule:data)
 		{
-			if(fireWallRule.getActiveStatus()==1)
-			{
-				isActive=true;
-			}
-			else
-			{
-				isActive=false;
-			}
+			isActive=fireWallRule.getActiveStatus()==1?true:false;
 			((DefaultTableModel) table.getModel()).addRow(new Object[]{fireWallRule.getConnection().getIp().toString(),fireWallRule.getConnection().getPort(),fireWallRule.getProtocol().getName().toString(),isActive});
 		}
-		//System.out.println("after"+table.getModel().getRowCount());
 	}
 	
 	public static void refreshStructFieldsTable(JTable table,ArrayList<StructsFieldsTable> data)
@@ -39,6 +29,7 @@ public class Refresh {
 			((DefaultTableModel)table.getModel()).addRow(new Object[]{structField.getName(),structField.getType(),structField.getMinRange(),structField.getMaxRange()});
 		}
 	}
+	
 	public static void refreshStructsTable(JTable table ,ArrayList<StructsTable> data)
 	{
 		GUI.deleteAllJtableRows(table,"StrcutTable");
@@ -46,7 +37,24 @@ public class Refresh {
 		{
 			((DefaultTableModel) table.getModel()).addRow(new Object[]{String.valueOf(struct.getCode()),struct.getName()});
 		}
-		
+	}
+	
+	public static void refreshProtocolsTable(JTable table,ArrayList<String> data)
+	{
+		GUI.deleteAllJtableRows(table, "Protocols");
+		for(String protocol:data)
+		{
+			((DefaultTableModel) table.getModel()).addRow(new Object[]{protocol});
+		}
+	}
+	
+	public static void refreshConnectionTable(JTable table,ArrayList<ConnectionTable> data)
+	{
+		GUI.deleteAllJtableRows(table, "Protocols");
+		for(ConnectionTable connection:data)
+		{
+			((DefaultTableModel) table.getModel()).addRow(new Object[]{connection.getIp(),connection.getPort()});
+		}
 	}
 
 }

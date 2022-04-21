@@ -16,38 +16,33 @@ import javax.swing.table.DefaultTableModel;
 
 public class AddStructFieldGUI extends GUI{
 	
+	//----------properties----------//
 	private final int ACTIVE=1;
-	private final int IN_ACTIVE=0;
+	private final int InACTIVE=0;
 	private SqliteDB sqlitedb;
 	private  ArrayList<StructsFieldsTable> structFields;
 	private boolean isFirst=false;
 	private String changeToValue;
-	private int taps_counter=0;
 	
+	//----------C'tor----------//
 	public AddStructFieldGUI(int width,int height,String msg)
 	{
 		super(width,height,msg);
 	}
 	
-	public void createGUI(int code,String structName,String protocolName,int port,String ip) throws SQLException
+	
+	//----------functions----------//
+	public void createGUI(int code,String structName,String protocolName) throws SQLException
 	{
 		   this.sqlitedb=SqliteDB.getSqliteDBInstance();
 		   this.structFields=new ArrayList<StructsFieldsTable>(); 
 		   DefaultTableModel model=new DefaultTableModel(new Object[]{"Field Name", "Type","Min Range","Max Range"},0);
-		   ProtocolTable protocolTable=new ProtocolTable(protocolName);
-		   ConnectionTable connectionTable=new ConnectionTable(ip,Integer.valueOf(port));
-		   FIreWallRulesTable fireWallRulesTable=new FIreWallRulesTable(ACTIVE);
-		   String[] columns= {"Field Name","Type","Min Range","Max Range"};
-		   //String[][] data= {{"1","2","3","4"},{"1","2","3","4"}};
-	       //JFrame frm=super.createFrame("netFilterDBApplication");
+		  
+		 
+		   //String[] columns= {"Field Name","Type","Min Range","Max Range"};
+		   
 	       JButton finished_button=super.createButton(this.frm,"Click me to add field to the structure",400,700,400,50); 
 	       JButton addProperty_button=super.createButton(this.frm,"Click me to display the field",400,630,400,50);
-	       
-	       /*JLabel structNameLabel=super.createLabel(this.frm,"Enter the Struct name:",40,50,200,100);
-	       JTextField structNameTextField=super.createTextField(this.frm,300,75,200,50);
-	       
-	       JLabel structCodeLabel=super.createLabel(this.frm, "Enter the struct Code", 640, 50, 200, 100);
-	       JTextField structCodeTextField=super.createTextField(this.frm, 900, 75, 200, 50);*/
 	       
 	       JLabel fieldNameLabel=super.createLabel(this.frm,"Enter the field name:",40,80,250,100);
 	       JTextField fieldNameTextField=super.createTextField(this.frm,300,110,200,50);
@@ -68,41 +63,40 @@ public class AddStructFieldGUI extends GUI{
 	       
 	       JLabel changeFieldLabel=super.createLabel(this.frm, "Enter new value:",20 ,400,220,50);
 	       JTextField changeFieldLabelTextField=super.createTextField(this.frm, 200, 400, 140, 50);
-	       JButton finishEditButton=super.createButton(this.frm, "Done", 60, 480, 200, 50);
+	       JButton DoneEditButton=super.createButton(this.frm, "Done", 60, 480, 200, 50);
 	       changeFieldLabel.setVisible(false);
 	       changeFieldLabelTextField.setVisible(false);
-	       finishEditButton.setVisible(false);
+	       DoneEditButton.setVisible(false);
 	       
 	       
+	       //-------Event functions------------//
 	       RemoveButton.addActionListener(new ActionListener()
 		   {
 	 	   		  @Override
 	 	   		  public void actionPerformed(ActionEvent e)
 	 	   		  {
-	 	   			int selected_row=structFieldsTabel.getSelectedRow();
-	 	   			//int selected_column=structFieldsTabel.getSelectedColumn();
-	 	   		    ((DefaultTableModel) structFieldsTabel.getModel()).removeRow(selected_row);
-	 	   		    taps_counter=0;
+	 	   			 removeStructField(structFieldsTabel);
 	 	   		  }
-	 		   }
-	 		   );
+		   });
 	       
 	       
-	       finishEditButton.addActionListener(new ActionListener()
+	       DoneEditButton.addActionListener(new ActionListener()
 		   {
+	    	   //----------active change of the structField property-----------//
 	 	   		  @Override
 	 	   		  public void actionPerformed(ActionEvent e)
 	 	   		  {
-	 	   			changeToValue=changeFieldLabelTextField.getText();
-	 	   			structFieldsTabel.getModel().setValueAt(changeToValue, structFieldsTabel.getSelectedRow(), structFieldsTabel.getSelectedColumn());
-		 	   		changeFieldLabel.setVisible(false);
+	 	   			changeValueOfStructField(changeFieldLabelTextField,structFieldsTabel);
+	 	   			changeFieldLabelTextField.setText("");
+	 	   			changeFieldLabel.setVisible(false);
 		   			changeFieldLabelTextField.setVisible(false);
-		   		    finishEditButton.setVisible(false);
+		   			DoneEditButton.setVisible(false);
 	 	   		  }
-	 		   });
+		   });
 	       
 	       EditButton.addActionListener(new ActionListener()
 		   {
+	    	   //-------invoking for changing struct field property----------//
  	   		  @Override
  	   		  public void actionPerformed(ActionEvent e)
  	   		  {
@@ -112,118 +106,74 @@ public class AddStructFieldGUI extends GUI{
  	   		    String fieldName=structFieldsTabel.getModel().getColumnName(selected_column).toString();
  	   			changeFieldLabel.setVisible(true);
  	   			changeFieldLabelTextField.setVisible(true);
- 	   		    finishEditButton.setVisible(true);
+ 	   			DoneEditButton.setVisible(true);
  	   		    changeFieldLabel.setText("Enter new "+fieldName+":");
- 	   		    //structFieldsTabel.getModel().setValueAt(changeToValue, selected_row, selected_column);
- 	   		    
- 	   		    
  	   		  }
- 		   }
- 		   );
+ 		   });
 	       
 	       addProperty_button.addActionListener(new ActionListener()
-	    		   {
-	    	   		  @Override
-	    	   		  public void actionPerformed(ActionEvent e)
-	    	   		  {
-	    	   			    Boolean IsToInsert=true;
-		    	   			String fieldName=fieldNameTextField.getText();
-		    	   			String type=cbTypes.getSelectedItem().toString();
-		    	   			String minRange=minRangeTextField.getText();
-		    	        	String maxRange=maxRangeTextField.getText();
-		    	        	//structFields.add(new StructsFieldsTable(fieldName,type,minRange,maxRange));
-		    	        	if(StructsFieldsTable.CheckRange(type, minRange, maxRange)==true)
-		    	        	{
-		    	        		JOptionPane.showMessageDialog(null, "Range i'snt proper");
-		    	        		return;
-		    	        	}
-		    	        	for(int i=0;i<structFieldsTabel.getRowCount();i++)
-		    	        	{
-		    	        		if(structFieldsTabel.getValueAt(i,0).toString().equals(fieldName))
-		    	        		{
-		    	        			IsToInsert=false;
-		    	        		}
-		    	        	}
-		    	        	if(IsToInsert==true)
-		    	        	{
-			    	        	fieldNameTextField.setText("");
-			    	        	minRangeTextField.setText("");
-			    	        	maxRangeTextField.setText("");
-			    	        	JOptionPane.showMessageDialog(null, "Successfuly added");
-			    	        	((DefaultTableModel) structFieldsTabel.getModel()).addRow(new Object[]{fieldName,type,minRange,maxRange});
-			    	        	taps_counter++;
-		    	        	}
-		    	        	else
-		    	        	{
-		    	        		JOptionPane.showMessageDialog(null, "Wrong Values,try again");
-		    	        	}
-	    	   		  }
-	    		   });
+	    	{
+	    	   	@Override
+	    	   	public void actionPerformed(ActionEvent e)
+	    	   	{
+	    	   		Boolean IsToInsert;
+		    	   	String fieldName=fieldNameTextField.getText();
+		    	   	String type=cbTypes.getSelectedItem().toString();
+		    	 	String minRange=minRangeTextField.getText();
+		    	    String maxRange=maxRangeTextField.getText();
+		    	    
+		    	    //------check if the min>max----------//
+		    	    if(StructsFieldsTable.CheckRange(type, minRange, maxRange)==true)
+		    	      {
+		    	        	JOptionPane.showMessageDialog(null, "Range i'snt proper");
+		    	        	return;
+		    	      }
+		    	   
+		    	  //-------check if there is no field like this one-------//
+		    	    IsToInsert=DistinctionFieldName(structFieldsTabel,fieldName);
+		    	    
+		    	  //-------if there is one--------------//
+		    	    if(!IsToInsert)
+		    	        {
+		    	    	JOptionPane.showMessageDialog(null, "Wrong Values,try again");
+			   
+		    	        }
+		    	   //-----if there is not one-------------//
+		    	   else
+		    	        {
+			    		   fieldNameTextField.setText("");
+			    	       minRangeTextField.setText("");
+			    	       maxRangeTextField.setText("");
+			    	       addStructField(structFieldsTabel,fieldName,type,minRange,maxRange);
+		    	        }
+	    	   	}
+	    	 });
 	       
 	       finished_button.addActionListener(new ActionListener()
 	    		   {
 	    	          @Override
 	    	          public void actionPerformed(ActionEvent e)
 	    	          {
-	    	        	  int fireWallRules_id,protocol_id,connection_id,struct_id,structField_id;
-	    	        	  int size=0;
-	    	        	  int i=0,index=0;
-	    	        	  Boolean isToInsert=true;
-	    	        	  readDataFromJTableToAArrayList(structFieldsTabel,structFields);
-	    	        	  for(StructsFieldsTable structField:structFields)
-	    	        	  {
-	    	        		  size+=StructsFieldsTable.getSizeOfTypeInBits(structField.getType());
-	    	        	  }
-	    	        	  
-	    	        	  try {
-		    	        		    StructsTable struct=new StructsTable(structName,Integer.valueOf(code),size);
-									protocol_id=sqlitedb.GetProtocolIdByProtocolName(protocolTable,0);
-									connection_id=sqlitedb.GetConnectionIdByIpAndPort(connectionTable,0);
-									protocolTable.setId(protocol_id);
-									connectionTable.setId(connection_id);
-									fireWallRulesTable.setConnection(connectionTable);
-									fireWallRulesTable.setProtocol(protocolTable);
-									fireWallRules_id=sqlitedb.GetFireWallRulesId(fireWallRulesTable,0);
-									fireWallRulesTable.setId(fireWallRules_id);
-									struct.setProtocol(protocolTable);
-									struct_id=sqlitedb.GetStructIdByCodeAndProtocol(struct,0,1);
-									struct.setId(struct_id);
-									
-								for(StructsFieldsTable structField:structFields)
-								{
-									structField.setStruct(struct);
-									if(checkValidationStructFieldName(structField)==true)
-									{
-										isToInsert=false;
-										index=i;
-									}
-									i++;
-								}
-								
-								if(isToInsert==true)
-								{
-								for(StructsFieldsTable structField:structFields)
-			    	        	  {
-									structField_id=sqlitedb.GetStructFieldId(structField,0);//here is the insertion
-			    	        	  }
-								}
-								else
-								{
-									JOptionPane.showMessageDialog(null, "Wrong values at row number "+index+1+", try again");
-								}
-	    	        	  	}
-	    	        	  catch (SQLException e1) {
-							// TODO Auto-generated catch block
-							JOptionPane.showMessageDialog(null,e1.toString());
-						}
-	    	        	  if(isToInsert==true)
-	    	        	  {
-		    	        	  JOptionPane.showMessageDialog(null, "Successfuly added");  
-		    	        	  frm.dispose();
-	    	        	  }
+						  int size=0,i=0,indexOfWrongField=0;
+						  Boolean isToInsert=true;
+						  readDataFromJTableToAArrayList(structFieldsTabel,structFields);
+						  size=getSizeOfStruct();
+						  StructsTable struct=PrepareStruct(protocolName,structName,code,size);
+						
+						  //------commit every structField to the proper struct--------//
+						  for(StructsFieldsTable structField:structFields)
+						  {
+							 structField.setStruct(struct);
+							 if(checkValidationStructFieldName(structField)==true)
+							 {
+								 isToInsert=false;
+								 indexOfWrongField=i;
+							 }
+							 i++;
+						  }
+						  InsertAction(isToInsert,indexOfWrongField);
 	    	          }
-	    		   }
-	    		   );
+	    		   });
 	  
 	       
 	       this.frm.setLayout(null); 
@@ -232,6 +182,97 @@ public class AddStructFieldGUI extends GUI{
 	       this.frm.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
 	}
+	
+	public void InsertAction(Boolean isToInsert,int indexOfWrongField)
+	{
+		//---------all fields are good validly-----//
+		  if(isToInsert==true)
+		  {
+			 InsertFields();
+		  }
+		  //------there is wrong field validly in row number indexOfWrongField+1-------//
+		 else
+		  {
+		     JOptionPane.showMessageDialog(null, "Wrong values at row number "+indexOfWrongField+1+", try again");
+		  }
+	}
+	
+	public void InsertFields()
+	{
+		try
+		{
+			sqlitedb.beginTransaction();
+			int structField_id;
+			for(StructsFieldsTable structField:structFields)
+			{
+				structField_id=sqlitedb.GetStructFieldId(structField,true);//here is the insertion
+			} 
+			JOptionPane.showMessageDialog(null, "Successfuly added"); 
+			sqlitedb.commitTransaction();
+			SqliteDB.sendSignalToNfqFIreWall();
+		  	frm.dispose();
+		}
+		catch (SQLException e) 
+		{
+			try {
+				sqlitedb.rollbackTransaction();
+			} catch (SQLException e1) {
+				// Silencing the rollback since it probably means the database isn't in transaction for some reason.
+			}
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+	}
+	
+	public StructsTable PrepareStruct(String protocolName,String structName,int code,int size)
+	{
+		 ProtocolTable protocol=ProtocolTable.getProtocolFromDB(protocolName,false , sqlitedb);
+		 StructsTable struct=StructsTable.getStructFromDB(protocol,structName,Integer.valueOf(code),size, sqlitedb, true, true);
+		 return struct; 
+	}
+	
+	public int getSizeOfStruct()
+	{
+		int size=0;
+		for(StructsFieldsTable structField:structFields)
+		{
+			size+=StructsFieldsTable.getSizeOfTypeInBits(structField.getType());
+  	  	}
+  	  	return size;
+	}
+	
+	public void removeStructField(JTable structFieldsTabel)
+	{
+		int selected_row=structFieldsTabel.getSelectedRow();
+		((DefaultTableModel) structFieldsTabel.getModel()).removeRow(selected_row);
+	}
+	
+	public void changeValueOfStructField(JTextField changeFieldLabelTextField,JTable structFieldsTabel)
+	{
+		changeToValue=changeFieldLabelTextField.getText();
+		structFieldsTabel.getModel().setValueAt(changeToValue, structFieldsTabel.getSelectedRow(), structFieldsTabel.getSelectedColumn());
+	   		
+	}
+	
+	public Boolean DistinctionFieldName(JTable structFieldsTabel,String fieldName)
+	{
+		Boolean isToInsert=true;
+		for(int i=0;i<structFieldsTabel.getRowCount();i++)
+        {
+        	if(structFieldsTabel.getValueAt(i,0).toString().equals(fieldName))
+        	{
+        		isToInsert=false;
+        	}
+        }
+		return isToInsert;
+	}
+	
+	public void addStructField (JTable structFieldsTabel,String fieldName,String type,String minRange,String maxRange)
+	{
+		  ((DefaultTableModel) structFieldsTabel.getModel()).addRow(new Object[]{fieldName,type,minRange,maxRange});	 
+	       JOptionPane.showMessageDialog(null, "Successfuly added");
+	}
+	
 	
 	public Boolean checkValidationStructFieldName(StructsFieldsTable structField)
 	{

@@ -8,14 +8,17 @@ import packetsNetFilterDB.StructsFieldsTable;
 
 public class sqliteDB {
 
+	//--------properties--------------//
 	private static sqliteDB sqlitedb=null;
 	private Connection con;
 	
+	//--------C'tor--------------//
 	public sqliteDB(String url) throws SQLException
 	{
 		con=DriverManager.getConnection(url);
 		con.createStatement().execute("PRAGMA foreign_keys = ON");
 	}
+	//--------Signelton implementation-------------//
 	public synchronized static sqliteDB getSqliteDBInstance() throws SQLException
 	{
 		if(sqlitedb==null)
@@ -25,7 +28,27 @@ public class sqliteDB {
 		return sqlitedb;
 	}
 	
-	public ArrayList getAllStructFields(String ip,int port,int structCode) throws SQLException
+	//------------functions--------------//
+	public int getProtocolIdByProtocolName(String protocolName) throws SQLException
+	{
+		String query="SELECT id\n" +
+					 "FROM Protocols\n" +
+					 "WHERE name LIKE ?";
+		int id=-1;
+		ResultSet rs;
+		PreparedStatement prpStmt=con.prepareStatement(query);
+		prpStmt.setString(1, protocolName);
+		rs=prpStmt.executeQuery();
+		if(rs.next())
+		{
+			id=rs.getInt("id");
+		}
+		rs.close();
+		prpStmt.close();
+		return id;
+	}
+	
+	public ArrayList getAllStructFields(String ip,int port,String protocolName,int structCode) throws SQLException
 	{
 		ArrayList<StructFieldsTable> structFields=new ArrayList<StructFieldsTable>();
 		String query="SELECT fieldName,type,minRange,maxRange\n" + 
@@ -38,12 +61,13 @@ public class sqliteDB {
 				"ON Structs.protocol_id=Protocols.id\n" + 
 				"INNER JOIN StructFields\n" + 
 				"ON StructFields.struct_id=Structs.id\n" + 
-				"WHERE Connections.ip LIKE ? AND Connections.port = ? AND Structs.code= ?";
+				"WHERE Connections.ip LIKE ? AND Connections.port = ? AND Protocols.name LIKE ? AND Structs.code= ?";
 		ResultSet rs;
 		PreparedStatement prpStmt=con.prepareStatement(query);
 		prpStmt.setString(1, ip);
 		prpStmt.setInt(2, port);
-		prpStmt.setInt(3, structCode);
+		prpStmt.setString(3, protocolName);
+		prpStmt.setInt(4, structCode);
 		rs=prpStmt.executeQuery();
 		while(rs.next())
 		{
