@@ -4,6 +4,7 @@
 
 
 /*! GLOBAL DECLARATIONS   */
+time_t rawTime;
 FILE* packetsLogFile;
 list* list_of_active_protocols;
 
@@ -38,20 +39,14 @@ void freeListOfActiveProtocols(list* list_of_protocols)
     structOfActiveProtocol *structOfProtocol,*tempForFreeStruct;
     structField *structFieldOfStruct,*tempForFreeStructField;
     protocol=list_first(list_of_protocols);
-
-    while(protocol)
+    int i=0,j=0,k=0;
+    for(i=0;i<list_of_protocols->nitems;i++)
     {
-        //-----if the protocol has 0 structs----//
-        if(protocol->list_of_structs->nitems==0)
-        {
-            protocol=list_next(list_of_active_protocols);
-            continue;
-        }
         structOfProtocol=list_first(protocol->list_of_structs);
-        while(structOfProtocol)
+        for(j=0;j<protocol->list_of_structs->nitems;j++)
         {
             structFieldOfStruct=list_first(structOfProtocol->list_of_structsFields);
-            while(structFieldOfStruct)
+            for(k=0;k<structOfProtocol->list_of_structsFields->nitems;k++)
             {
                 //------free struct field-----//
                 free(structFieldOfStruct->fieldName);
@@ -63,15 +58,15 @@ void freeListOfActiveProtocols(list* list_of_protocols)
                 free(tempForFreeStructField);
             }
             //-----free the struct and move to the next struct-----//
-            free(structOfProtocol->list_of_structsFields);
             tempForFreeStruct=structOfProtocol;
             structOfProtocol=list_next(protocol->list_of_structs);
+            free(tempForFreeStruct->list_of_structsFields);
             free(tempForFreeStruct);
         }
         //-----free the protocol and move to the next protocol-----//
-        free(protocol->list_of_structs);
         tempForFreeProtocol=protocol;
         protocol=list_next(list_of_protocols);
+        free(tempForFreeProtocol->list_of_structs);
         free(tempForFreeProtocol);
     }
     //-----free the list of protocols------//
@@ -102,7 +97,6 @@ void freeListOfActiveProtocols(list* list_of_protocols)
 
  void readDB(int signum)
  {
-    fflush(stdout);
     list *list_of_protocols_for_free;
     if(signum==SIGUSR1)
     {
@@ -110,6 +104,7 @@ void freeListOfActiveProtocols(list* list_of_protocols)
         list_of_active_protocols=readActiveProtocolsFromDB();//READ ALL THE SQLITE DB"
         if(list_of_protocols_for_free!=NULL)
         {
+            printf("/**************Catched the Signal***************/");
             freeListOfActiveProtocols(list_of_protocols_for_free);
         }
     }
@@ -245,6 +240,9 @@ u_int32_t print_pkt (struct nfq_data *tb)
 	fprintf(packetsLogFile,"\n\n");
     fflush(packetsLogFile);
 	fprintf(packetsLogFile,"!*********************************************!\n");
+	fflush(packetsLogFile);
+	time(&rawTime);
+	fprintf(packetsLogFile,"Dropping time: %s\n",asctime(localtime(&rawTime)));
 	fflush(packetsLogFile);
 	printf("                     Packet                 \n");
 	fprintf(packetsLogFile,"                     Packet                 \n");
@@ -489,11 +487,10 @@ int check_pkt(__u16 dest_port,__u32 dest_ip,int payload_len,unsigned char *data_
 
    //list* list_of_active_protocols=NULL;
    //list* list_of_structFields=NULL;
+   i=0;
    int structSize=0;
    //readActiveProtocolsFromDB(&list_of_active_protocols);//READ ALL THE SQLITE DB"
    active_protocol_to_check=list_first(list_of_active_protocols);
-
-   i=0;
    while(active_protocol_to_check)
    {
      raw_payload=data_payload + (iph->ihl * 4)+ sizeof(struct udphdr); //(iph->ihl * 4)=sizeof(Network layer),sizeof(struct udphdr)=sizeof(transport header)
@@ -513,10 +510,10 @@ int check_pkt(__u16 dest_port,__u32 dest_ip,int payload_len,unsigned char *data_
            //readAllStructFields(structCode,active_protocol_to_check->protocolId,&list_of_structFields,&structSize);
 
            //instead of using payload_len-sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr)
-            printf("   |-Struct Size - Packet   : %lu\n",payload_len-(2*sizeof(structCode))-(iph->ihl * 4)-sizeof(struct udphdr));
+            printf("   |-Struct Size - Packet   : %lu\n",payload_len-(sizeof(int)*2)-(iph->ihl * 4)-sizeof(struct udphdr));
             printf("   |-Struct size - DB       : %d\n\n",struct_of_active_protocol_to_check->struct_size);
             printf("*************Fields************:\n");
-            fprintf(packetsLogFile,"   |-Struct Size - Packet   : %lu\n",payload_len-sizeof(structCode)-(iph->ihl * 4)-sizeof(struct udphdr));
+            fprintf(packetsLogFile,"   |-Struct Size - Packet   : %lu\n",payload_len-(sizeof(int)*2)-(iph->ihl * 4)-sizeof(struct udphdr));
             fprintf(packetsLogFile,"   |-Struct size - DB       : %d\n\n",struct_of_active_protocol_to_check->struct_size);
             fprintf(packetsLogFile,"*************Fields************:\n");
             fflush(packetsLogFile);
@@ -584,9 +581,9 @@ int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, vo
 	{
 		id = ntohl(ph->packet_id);
 	}
+
 	mark=nfq_get_nfmark(nfa);
 	payload_len = nfq_get_payload(nfa, (unsigned char**)&data_payload);//the payload_len includes the raw pyload+ip header+transport header(udp header)
-
 	iph=(struct iphdr *)data_payload;
 	if(iph->protocol == IPPROTO_UDP)
 	{
@@ -596,11 +593,11 @@ int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg, struct nfq_data *nfa, vo
        decision=check_pkt(dest_port,dest_ip,payload_len,data_payload,iph,udph,nfa,&surfer);
        if(decision==0)
        {
-            printf("\n                  Droped Pcket                 \n");
-          	printf("!*********************************************!\n");
             fprintf(packetsLogFile,"\n                  Droped Pcket                 \n");
           	fprintf(packetsLogFile,"!*********************************************!\n");
           	fflush(packetsLogFile);
+            printf("\n                  Droped Pcket                 \n");
+          	printf("!*********************************************!\n");
             fclose(packetsLogFile);
             return nfq_set_verdict2(qh, id, NF_DROP, mark | 0xFFFFFFFF,0, NULL);
        }

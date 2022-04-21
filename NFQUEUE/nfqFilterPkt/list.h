@@ -10,6 +10,11 @@
 typedef int (*comapre_fun)(void*,void *);
 /* Node type definition */
 
+/*node_t definition*/
+/*The node_t element are as follow :
+    next - pointer to the next node.
+    data-pointer to the data of the node.
+*/
 typedef struct node_t {
 	struct node_t *next;
 	void *data;
